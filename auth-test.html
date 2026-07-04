@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Auth Test</title>
+</head>
+
+<body>
+
+  <h2>TESTE LOGIN GOOGLE</h2>
+
+  <button id="login">Login com Google</button>
+
+  <pre id="log"></pre>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+
+    const supabaseUrl = "https://frafczojgjzxrypnstam.supabase.co"
+    const supabaseKey = "sb_publishable_eIV6S_JcirxgJvRiwN55Qg_WW6amXCY"
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const log = (msg) => {
+      document.getElementById("log").textContent += msg + "\n"
+      console.log(msg)
+    }
+
+    document.getElementById("login").addEventListener("click", async () => {
+      log("INICIANDO LOGIN...")
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.href
+        }
+      })
+
+      if (error) log("ERRO: " + JSON.stringify(error))
+    })
+
+    const { data } = await supabase.auth.getSession()
+
+    log("SESSION: " + JSON.stringify(data))
+  </script>
+
+</body>
+</html>
