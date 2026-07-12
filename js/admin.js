@@ -1,4 +1,16 @@
 const adminMessage = document.querySelector("#admin-message");
+const appointmentMessage = document.querySelector("#appointment-message");
+let appointmentMessageTimeout;
+
+function showAppointmentMessage(text, type = "error", autoHide = false) {
+  window.clearTimeout(appointmentMessageTimeout);
+  showMessage(appointmentMessage, text, type);
+  if (text && autoHide) {
+    appointmentMessageTimeout = window.setTimeout(() => {
+      showMessage(appointmentMessage, "");
+    }, 5000);
+  }
+}
 
 function setBusy(button, busy, busyText) {
   if (!button.dataset.originalText) button.dataset.originalText = button.textContent;
@@ -154,18 +166,25 @@ function renderTimes(items) {
   });
 }
 
+function clearAvailableTimes() {
+  document.querySelector("#available-times").replaceChildren();
+  document.querySelector("#selected-time").value = "";
+  document.querySelector("#selected-time-label").textContent = "";
+  document.querySelector("#create-button").disabled = true;
+}
+
 async function searchAvailableTimes() {
   const professionalId = document.querySelector("#profissional").value;
   const serviceId = document.querySelector("#servico").value;
   const date = document.querySelector("#appointment-date").value;
   if (!professionalId || !serviceId || !date) {
-    showMessage(adminMessage, "Selecione profissional, serviço e data para buscar horários.");
+    showAppointmentMessage("Selecione profissional, serviço e data para buscar horários.");
     return;
   }
 
   const button = document.querySelector("#search-times-button");
   setBusy(button, true, "Buscando...");
-  showMessage(adminMessage, "");
+  showAppointmentMessage("");
   try {
     const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis", {
       p_profissional_id: professionalId,
@@ -177,7 +196,7 @@ async function searchAvailableTimes() {
     renderTimes(data);
   } catch (error) {
     renderTimes([]);
-    showMessage(adminMessage, readableError(error, "Não foi possível buscar os horários."));
+    showAppointmentMessage(readableError(error, "Não foi possível buscar os horários."));
   } finally {
     setBusy(button, false, "");
   }
@@ -191,16 +210,16 @@ async function createAppointment(event) {
   event.preventDefault();
   const time = document.querySelector("#selected-time").value;
   if (!time) {
-    showMessage(adminMessage, "Escolha um horário disponível antes de criar o agendamento.");
+    showAppointmentMessage("Escolha um horário disponível antes de criar o agendamento.");
     return;
   }
 
   const button = document.querySelector("#create-button");
   setBusy(button, true, "Criando...");
-  showMessage(adminMessage, "");
+  showAppointmentMessage("");
   try {
     const date = document.querySelector("#appointment-date").value;
-    const { error } = await supabaseClient.rpc("solicitar_agendamento_recepcao", {
+    const { data, error } = await supabaseClient.rpc("solicitar_agendamento_recepcao", {
       p_profissional_id: document.querySelector("#profissional").value,
       p_servico_id: document.querySelector("#servico").value,
       p_start_at: buildSaoPauloTimestamp(date, time),
@@ -214,12 +233,19 @@ async function createAppointment(event) {
       p_notes: null
     });
     if (error) throw error;
-    showMessage(adminMessage, "Agendamento criado com sucesso.", "success");
-    document.querySelector("#appointment-form").reset();
-    renderTimes([]);
+    const result = Array.isArray(data) ? data[0] : data;
+    if (result?.success === false) {
+      throw new Error(result.message || result.error || "Não foi possível criar o agendamento.");
+    }
+
+    showAppointmentMessage("Agendamento criado com sucesso!", "success", true);
+    document.querySelector("#cliente-nome").value = "";
+    document.querySelector("#cliente-phone").value = "";
+    document.querySelector("#cliente-email").value = "";
+    clearAvailableTimes();
     await loadAgenda();
   } catch (error) {
-    showMessage(adminMessage, readableError(error, "Não foi possível criar o agendamento."));
+    showAppointmentMessage(readableError(error, "Não foi possível criar o agendamento."));
   } finally {
     setBusy(button, false, "");
     button.disabled = !document.querySelector("#selected-time").value;
