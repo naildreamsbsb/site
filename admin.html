@@ -64,6 +64,58 @@
     </section>
   </main>
 
+  <div id="completion-modal" class="modal-overlay" hidden>
+    <section class="completion-modal" role="dialog" aria-modal="true" aria-labelledby="completion-modal-title">
+      <div class="modal-heading">
+        <div>
+          <h2 id="completion-modal-title">Finalizar atendimento</h2>
+          <p>Confira os dados e informe os detalhes do pagamento.</p>
+        </div>
+        <button id="close-completion-modal" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+
+      <div class="completion-summary">
+        <div><span>Cliente</span><strong id="completion-client"></strong></div>
+        <div><span>Profissional</span><strong id="completion-professional"></strong></div>
+        <div><span>Serviço</span><strong id="completion-service"></strong></div>
+        <div><span>Data</span><strong id="completion-date"></strong></div>
+        <div><span>Horário</span><strong id="completion-time"></strong></div>
+        <div><span>Valor total</span><strong id="completion-total"></strong></div>
+      </div>
+
+      <form id="completion-form" class="completion-form">
+        <p id="completion-message" class="message" role="alert" aria-live="polite"></p>
+        <div class="completion-fields">
+          <label>Valor pago<input id="completion-amount" type="text" inputmode="decimal" required></label>
+          <label>Forma de pagamento
+            <select id="completion-method" required>
+              <option value="Pix">Pix</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Cartão de débito">Cartão de débito</option>
+              <option value="Cartão de crédito">Cartão de crédito</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </label>
+          <label>Status do pagamento
+            <select id="completion-status" required>
+              <option value="pago">pago</option>
+              <option value="parcial">parcial</option>
+              <option value="pendente">pendente</option>
+              <option value="cortesia">cortesia</option>
+              <option value="nao_cobrado">nao_cobrado</option>
+            </select>
+          </label>
+          <label class="modal-full-width">Observações do atendimento<textarea id="completion-notes" rows="3"></textarea></label>
+          <label class="modal-full-width">Observações do pagamento<textarea id="completion-payment-notes" rows="3"></textarea></label>
+        </div>
+        <div class="modal-actions">
+          <button id="cancel-completion" class="modal-secondary-button" type="button">Cancelar</button>
+          <button id="confirm-completion" type="submit">Confirmar conclusão</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>

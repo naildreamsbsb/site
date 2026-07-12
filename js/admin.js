@@ -1,7 +1,15 @@
 const adminMessage = document.querySelector("#admin-message");
 const appointmentMessage = document.querySelector("#appointment-message");
 const agendaActionMessage = document.querySelector("#agenda-action-message");
+const completionModal = document.querySelector("#completion-modal");
+const completionForm = document.querySelector("#completion-form");
+const completionMessage = document.querySelector("#completion-message");
+const confirmCompletionButton = document.querySelector("#confirm-completion");
+const cancelCompletionButton = document.querySelector("#cancel-completion");
+const closeCompletionButton = document.querySelector("#close-completion-modal");
 let appointmentMessageTimeout;
+let completionAppointment = null;
+let completionSaving = false;
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -9,7 +17,6 @@ const ACTIONABLE_STATUSES = new Set([
 const CLOSED_STATUSES = new Set([
   "concluido", "cancelado_cliente", "cancelado_studio", "nao_compareceu", "expirado"
 ]);
-const PAYMENT_STATUSES = new Set(["pago", "parcial", "pendente", "cortesia", "nao_cobrado"]);
 
 function showAppointmentMessage(text, type = "error", autoHide = false) {
   window.clearTimeout(appointmentMessageTimeout);
@@ -103,37 +110,90 @@ function normalizeAmount(value) {
   return Number(normalized);
 }
 
-function collectCompletionData(appointment) {
-  const amountInput = window.prompt("Valor pago:", appointment.totalPrice ?? "");
-  if (amountInput === null) return null;
-  const amountPaid = normalizeAmount(amountInput);
+function setCompletionSummary(id, value) {
+  document.querySelector(id).textContent = displayValue(value);
+}
+
+function openCompletionModal(appointment) {
+  completionAppointment = appointment;
+  completionForm.reset();
+  showMessage(agendaActionMessage, "");
+  showMessage(completionMessage, "");
+  setCompletionSummary("#completion-client", appointment.clienteNome);
+  setCompletionSummary("#completion-professional", appointment.profissionalNome);
+  setCompletionSummary("#completion-service", appointment.servicoNome);
+  setCompletionSummary("#completion-date", appointment.dataBr);
+  setCompletionSummary(
+    "#completion-time",
+    `${displayValue(appointment.horaInicio)} – ${displayValue(appointment.horaFim)}`
+  );
+  setCompletionSummary("#completion-total", appointment.totalPrice);
+  document.querySelector("#completion-amount").value = appointment.totalPrice ?? "";
+  document.querySelector("#completion-method").value = "Pix";
+  document.querySelector("#completion-status").value = "pago";
+  completionModal.hidden = false;
+  document.body.classList.add("modal-open");
+  document.querySelector("#completion-amount").focus();
+}
+
+function closeCompletionModal() {
+  if (completionSaving) return;
+  completionModal.hidden = true;
+  document.body.classList.remove("modal-open");
+  completionAppointment = null;
+  showMessage(completionMessage, "");
+}
+
+async function handleCompletionSubmit(event) {
+  event.preventDefault();
+  if (!completionAppointment || completionSaving) return;
+
+  const amountPaid = normalizeAmount(document.querySelector("#completion-amount").value);
+  const paymentMethod = document.querySelector("#completion-method").value;
+  const paymentStatus = document.querySelector("#completion-status").value;
+  const notes = document.querySelector("#completion-notes").value.trim();
+  const paymentNotes = document.querySelector("#completion-payment-notes").value.trim();
+
   if (!Number.isFinite(amountPaid) || amountPaid < 0) {
-    showMessage(agendaActionMessage, "Informe um valor pago válido.");
-    return null;
+    showMessage(completionMessage, "Informe um valor pago válido, igual ou maior que zero.");
+    return;
+  }
+  if (paymentStatus === "pago" && amountPaid <= 0) {
+    showMessage(completionMessage, "Para o status pago, o valor deve ser maior que zero.");
+    return;
   }
 
-  const paymentMethod = window.prompt(
-    "Forma de pagamento (Pix, Dinheiro, Cartão de débito, Cartão de crédito ou Outro):",
-    "Pix"
-  );
-  if (paymentMethod === null) return null;
-  if (!paymentMethod.trim()) {
-    showMessage(agendaActionMessage, "Informe a forma de pagamento.");
-    return null;
-  }
+  completionSaving = true;
+  confirmCompletionButton.disabled = true;
+  cancelCompletionButton.disabled = true;
+  closeCompletionButton.disabled = true;
+  confirmCompletionButton.textContent = "Finalizando...";
+  showMessage(completionMessage, "");
 
-  const paymentStatus = window.prompt(
-    "Status do pagamento (pago, parcial, pendente, cortesia ou nao_cobrado):",
-    "pago"
-  );
-  if (paymentStatus === null) return null;
-  const normalizedStatus = paymentStatus.trim().toLowerCase();
-  if (!PAYMENT_STATUSES.has(normalizedStatus)) {
-    showMessage(agendaActionMessage, "Informe um status de pagamento válido.");
-    return null;
-  }
+  try {
+    await callAppointmentRpc("marcar_agendamento_concluido_staff", {
+      p_agendamento_id: completionAppointment.id,
+      p_amount_paid: amountPaid,
+      p_payment_method: paymentMethod,
+      p_payment_status: paymentStatus,
+      p_notes: notes || "Atendimento concluído pelo painel administrativo.",
+      p_payment_notes: paymentNotes || null
+    });
 
-  return { amountPaid, paymentMethod: paymentMethod.trim(), paymentStatus: normalizedStatus };
+    completionSaving = false;
+    closeCompletionModal();
+    await loadAgenda();
+    showMessage(agendaActionMessage, "Atendimento concluído com sucesso!", "success");
+  } catch (error) {
+    console.error("Erro ao concluir atendimento:", error);
+    showMessage(completionMessage, readableError(error, "Não foi possível concluir o atendimento."));
+  } finally {
+    completionSaving = false;
+    confirmCompletionButton.disabled = false;
+    cancelCompletionButton.disabled = false;
+    closeCompletionButton.disabled = false;
+    confirmCompletionButton.textContent = "Confirmar conclusão";
+  }
 }
 
 function renderCardActions(card, appointment) {
@@ -162,20 +222,8 @@ function renderCardActions(card, appointment) {
     });
   }));
 
-  actions.appendChild(createActionButton("Concluir", "action-complete", (event) => {
-    const completion = collectCompletionData(appointment);
-    if (!completion) return;
-    runAppointmentAction(event.currentTarget, async () => {
-      await callAppointmentRpc("marcar_agendamento_concluido_staff", {
-        p_agendamento_id: appointment.id,
-        p_amount_paid: completion.amountPaid,
-        p_payment_method: completion.paymentMethod,
-        p_payment_status: completion.paymentStatus,
-        p_notes: "Atendimento concluído pelo painel administrativo.",
-        p_payment_notes: null
-      });
-      return "Atendimento concluído com sucesso.";
-    });
+  actions.appendChild(createActionButton("Concluir", "action-complete", () => {
+    openCompletionModal(appointment);
   }));
 
   actions.appendChild(createActionButton("Cancelar", "action-cancel", (event) => {
@@ -443,4 +491,13 @@ document.querySelector("#logout-button").addEventListener("click", () => signOut
 document.querySelector("#agenda-form").addEventListener("submit", loadAgenda);
 document.querySelector("#search-times-button").addEventListener("click", searchAvailableTimes);
 document.querySelector("#appointment-form").addEventListener("submit", createAppointment);
+completionForm.addEventListener("submit", handleCompletionSubmit);
+cancelCompletionButton.addEventListener("click", closeCompletionModal);
+closeCompletionButton.addEventListener("click", closeCompletionModal);
+completionModal.addEventListener("click", (event) => {
+  if (event.target === completionModal) closeCompletionModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !completionModal.hidden) closeCompletionModal();
+});
 initializeAdmin();
