@@ -57,6 +57,16 @@ h1, h2, h3, p { margin-top: 0; }
 .card-details div { display: flex; flex-direction: column; }
 .card-details span { color: var(--muted); font-size: .76rem; }
 .card-details strong { overflow-wrap: anywhere; font-size: .9rem; }
+.card-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.card-action-button { flex: 1 1 auto; padding: .55rem .7rem; font-size: .82rem; }
+.action-confirm { background: var(--primary); }
+.action-complete { color: #374151; background: #e5e7eb; }
+.action-complete:hover:not(:disabled) { color: #fff; background: #4b5563; }
+.action-cancel { background: var(--error); }
+.action-cancel:hover:not(:disabled) { background: #842631; }
+.action-no-show { color: #68430a; background: #f5c96a; }
+.action-no-show:hover:not(:disabled) { color: #fff; background: #9a6812; }
+.appointment-closed { margin: 1rem 0 0; padding-top: .8rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; font-weight: 700; }
 .appointment-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: end; }
 .full-width { grid-column: 1 / -1; }
 .time-section { align-self: stretch; }

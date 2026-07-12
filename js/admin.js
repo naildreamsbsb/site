@@ -1,6 +1,15 @@
 const adminMessage = document.querySelector("#admin-message");
 const appointmentMessage = document.querySelector("#appointment-message");
+const agendaActionMessage = document.querySelector("#agenda-action-message");
 let appointmentMessageTimeout;
+
+const ACTIONABLE_STATUSES = new Set([
+  "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
+]);
+const CLOSED_STATUSES = new Set([
+  "concluido", "cancelado_cliente", "cancelado_studio", "nao_compareceu", "expirado"
+]);
+const PAYMENT_STATUSES = new Set(["pago", "parcial", "pendente", "cortesia", "nao_cobrado"]);
 
 function showAppointmentMessage(text, type = "error", autoHide = false) {
   window.clearTimeout(appointmentMessageTimeout);
@@ -39,6 +48,163 @@ function addDetail(container, label, value) {
   container.appendChild(item);
 }
 
+function rpcResultError(data) {
+  const result = Array.isArray(data) ? data[0] : data;
+  return result?.success === false
+    ? new Error(result.message || result.error || "A ação não pôde ser concluída.")
+    : null;
+}
+
+async function runAppointmentAction(button, callback) {
+  const card = button.closest(".appointment-card");
+  const cardButtons = [...card.querySelectorAll(".card-actions button")];
+  const originalText = button.textContent;
+
+  cardButtons.forEach((item) => { item.disabled = true; });
+  button.textContent = "Processando...";
+  showMessage(agendaActionMessage, "");
+
+  try {
+    const successMessage = await callback();
+    await loadAgenda();
+    showMessage(agendaActionMessage, successMessage, "success");
+  } catch (error) {
+    console.error("Erro ao executar ação no agendamento:", error);
+    showMessage(agendaActionMessage, readableError(error, "Não foi possível concluir a ação."));
+  } finally {
+    if (card.isConnected) {
+      cardButtons.forEach((item) => { item.disabled = false; });
+      button.textContent = originalText;
+    }
+  }
+}
+
+async function callAppointmentRpc(name, parameters) {
+  const { data, error } = await supabaseClient.rpc(name, parameters);
+  if (error) throw error;
+  const resultError = rpcResultError(data);
+  if (resultError) throw resultError;
+}
+
+function createActionButton(label, className, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `card-action-button ${className}`;
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function normalizeAmount(value) {
+  const cleaned = String(value).trim().replace(/[^\d,.-]/g, "");
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+  return Number(normalized);
+}
+
+function collectCompletionData(appointment) {
+  const amountInput = window.prompt("Valor pago:", appointment.totalPrice ?? "");
+  if (amountInput === null) return null;
+  const amountPaid = normalizeAmount(amountInput);
+  if (!Number.isFinite(amountPaid) || amountPaid < 0) {
+    showMessage(agendaActionMessage, "Informe um valor pago válido.");
+    return null;
+  }
+
+  const paymentMethod = window.prompt(
+    "Forma de pagamento (Pix, Dinheiro, Cartão de débito, Cartão de crédito ou Outro):",
+    "Pix"
+  );
+  if (paymentMethod === null) return null;
+  if (!paymentMethod.trim()) {
+    showMessage(agendaActionMessage, "Informe a forma de pagamento.");
+    return null;
+  }
+
+  const paymentStatus = window.prompt(
+    "Status do pagamento (pago, parcial, pendente, cortesia ou nao_cobrado):",
+    "pago"
+  );
+  if (paymentStatus === null) return null;
+  const normalizedStatus = paymentStatus.trim().toLowerCase();
+  if (!PAYMENT_STATUSES.has(normalizedStatus)) {
+    showMessage(agendaActionMessage, "Informe um status de pagamento válido.");
+    return null;
+  }
+
+  return { amountPaid, paymentMethod: paymentMethod.trim(), paymentStatus: normalizedStatus };
+}
+
+function renderCardActions(card, appointment) {
+  const currentStatus = String(appointment.status || "").toLowerCase();
+
+  if (CLOSED_STATUSES.has(currentStatus)) {
+    const closed = document.createElement("p");
+    closed.className = "appointment-closed";
+    closed.textContent = "Atendimento encerrado";
+    card.appendChild(closed);
+    return;
+  }
+  if (!ACTIONABLE_STATUSES.has(currentStatus)) return;
+
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+
+  actions.appendChild(createActionButton("Confirmar", "action-confirm", (event) => {
+    runAppointmentAction(event.currentTarget, async () => {
+      await callAppointmentRpc("confirmar_agendamento_staff", {
+        p_agendamento_id: appointment.id,
+        p_deposit_status: "pago",
+        p_notes: "Confirmado pelo painel administrativo."
+      });
+      return "Agendamento confirmado com sucesso.";
+    });
+  }));
+
+  actions.appendChild(createActionButton("Concluir", "action-complete", (event) => {
+    const completion = collectCompletionData(appointment);
+    if (!completion) return;
+    runAppointmentAction(event.currentTarget, async () => {
+      await callAppointmentRpc("marcar_agendamento_concluido_staff", {
+        p_agendamento_id: appointment.id,
+        p_amount_paid: completion.amountPaid,
+        p_payment_method: completion.paymentMethod,
+        p_payment_status: completion.paymentStatus,
+        p_notes: "Atendimento concluído pelo painel administrativo.",
+        p_payment_notes: null
+      });
+      return "Atendimento concluído com sucesso.";
+    });
+  }));
+
+  actions.appendChild(createActionButton("Cancelar", "action-cancel", (event) => {
+    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
+    const reason = window.prompt("Motivo do cancelamento:");
+    runAppointmentAction(event.currentTarget, async () => {
+      await callAppointmentRpc("cancelar_agendamento", {
+        p_agendamento_id: appointment.id,
+        p_cancel_reason: reason?.trim() || "Cancelado pelo painel administrativo."
+      });
+      return "Agendamento cancelado com sucesso.";
+    });
+  }));
+
+  actions.appendChild(createActionButton("Não compareceu", "action-no-show", (event) => {
+    if (!window.confirm("Confirmar que a cliente não compareceu?")) return;
+    const notes = window.prompt("Observação:");
+    runAppointmentAction(event.currentTarget, async () => {
+      await callAppointmentRpc("marcar_nao_compareceu_staff", {
+        p_agendamento_id: appointment.id,
+        p_notes: notes?.trim() || "Cliente não compareceu."
+      });
+      return "Ausência registrada com sucesso.";
+    });
+  }));
+
+  card.appendChild(actions);
+}
+
 function renderAgenda(items) {
   const list = document.querySelector("#agenda-list");
   list.replaceChildren();
@@ -72,6 +238,7 @@ function renderAgenda(items) {
     addDetail(details, "Depósito", appointment.depositStatus);
     addDetail(details, "Pagamento", appointment.paymentStatus);
     card.append(heading, details);
+    renderCardActions(card, appointment);
     list.appendChild(card);
   });
 }
@@ -90,11 +257,11 @@ async function loadAgenda(event) {
       p_profissional_id: null,
       p_statuses: null
     });
-    console.log("listar_agenda_staff result", data, error);
     if (error) throw error;
     const items = data?.items || [];
     renderAgenda(items);
   } catch (error) {
+    console.error("Erro ao carregar a agenda:", error);
     renderAgenda([]);
     showMessage(adminMessage, readableError(error, "Não foi possível carregar a agenda."));
   } finally {
