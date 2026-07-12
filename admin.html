@@ -56,6 +56,37 @@
       <div id="finance-content"></div>
     </section>
 
+    <section id="commissions-section" class="panel commissions-section" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>Comissões</h2>
+          <p>Gere, confira e acompanhe o pagamento das comissões.</p>
+        </div>
+      </div>
+      <p id="commissions-message" class="message" role="alert" aria-live="polite"></p>
+      <form id="commissions-form" class="commissions-filters">
+        <label>Data inicial<input id="commissions-start-date" type="date" required></label>
+        <label>Data final<input id="commissions-end-date" type="date" required></label>
+        <label>Profissional
+          <select id="commissions-professional"><option value="">Todas</option></select>
+        </label>
+        <label>Status
+          <select id="commissions-status">
+            <option value="todas">Todas</option>
+            <option value="calculada">Calculada</option>
+            <option value="aprovada">Aprovada</option>
+            <option value="paga">Paga</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </label>
+        <div class="commissions-filter-actions">
+          <button id="generate-commissions-button" type="button">Gerar comissões</button>
+          <button id="load-commissions-button" class="button-secondary" type="submit">Carregar comissões</button>
+        </div>
+      </form>
+      <div id="commissions-content"></div>
+    </section>
+
     <section class="panel">
       <div class="section-heading">
         <div>
@@ -155,6 +186,35 @@
         <div class="modal-actions">
           <button id="back-appointment-action" class="modal-secondary-button" type="button">Voltar</button>
           <button id="confirm-appointment-action" type="submit">Confirmar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="commission-adjust-modal" class="modal-overlay" hidden>
+    <section class="completion-modal action-modal" role="dialog" aria-modal="true" aria-labelledby="commission-adjust-title">
+      <div class="modal-heading">
+        <div>
+          <h2 id="commission-adjust-title">Ajustar comissão</h2>
+          <p>Informe o novo valor e registre o motivo do ajuste.</p>
+        </div>
+        <button id="close-commission-adjust" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+
+      <div class="action-summary commission-adjust-summary">
+        <div><span>Cliente</span><strong id="commission-client"></strong></div>
+        <div><span>Profissional</span><strong id="commission-professional"></strong></div>
+        <div><span>Serviço</span><strong id="commission-service"></strong></div>
+        <div><span>Comissão atual</span><strong id="commission-current-value"></strong></div>
+      </div>
+
+      <form id="commission-adjust-form" class="stack">
+        <p id="commission-adjust-message" class="message" role="alert" aria-live="polite"></p>
+        <label>Novo valor da comissão<input id="commission-new-value" type="text" inputmode="decimal" required></label>
+        <label>Motivo do ajuste<textarea id="commission-adjust-reason" rows="4" required></textarea></label>
+        <div class="modal-actions">
+          <button id="cancel-commission-adjust" class="modal-secondary-button" type="button">Cancelar</button>
+          <button id="confirm-commission-adjust" type="submit">Confirmar</button>
         </div>
       </form>
     </section>

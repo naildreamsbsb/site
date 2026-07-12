@@ -94,7 +94,20 @@ h1, h2, h3, p { margin-top: 0; }
 .action-summary strong { overflow-wrap: anywhere; font-size: .9rem; }
 .appointment-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: end; }
 .finance-section[hidden] { display: none; }
+.commissions-section[hidden] { display: none; }
 .finance-filters { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; align-items: end; gap: 1rem; margin-bottom: 1.2rem; }
+.commissions-filters { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); align-items: end; gap: 1rem; margin-bottom: 1.2rem; }
+.commissions-filter-actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: .7rem; }
+.commission-row-actions { display: flex; align-items: center; gap: .45rem; }
+.commission-row-actions button { padding: .45rem .65rem; white-space: nowrap; font-size: .76rem; }
+.commission-adjust-button { color: var(--primary); background: #f7e9ee; border: 1px solid #e7bdcd; }
+.commission-adjust-button:hover:not(:disabled) { color: #fff; }
+.commission-pay-button { background: var(--success); }
+.commission-pay-button:hover:not(:disabled) { background: #1f6040; }
+.commission-state { font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.commission-state-paga { color: var(--success); }
+.commission-state-cancelada { color: var(--error); }
+.commission-notes { max-width: 240px; white-space: normal; }
 .finance-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin-bottom: 1.5rem; }
 .finance-card { display: flex; min-height: 90px; flex-direction: column; justify-content: space-between; gap: .7rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: #fffafb; }
 .finance-card span { color: var(--muted); font-size: .8rem; font-weight: 650; }
@@ -128,7 +141,7 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 760px) {
   .topbar { align-items: flex-start; }
   .user-area { flex-direction: column; align-items: flex-end; text-align: right; }
-  .form-row, .appointment-form, .finance-filters { grid-template-columns: 1fr; }
+  .form-row, .appointment-form, .finance-filters, .commissions-filters { grid-template-columns: 1fr; }
   .completion-summary, .completion-fields, .action-summary { grid-template-columns: 1fr; }
   .modal-full-width { grid-column: auto; }
   .modal-actions { flex-direction: column-reverse; }
@@ -136,4 +149,6 @@ h1, h2, h3, p { margin-top: 0; }
   .full-width { grid-column: auto; }
   .form-row button, .form-action button, .full-width button { width: 100%; }
   .finance-filters button { width: 100%; }
+  .commissions-filter-actions { flex-direction: column; }
+  .commissions-filter-actions button { width: 100%; }
 }

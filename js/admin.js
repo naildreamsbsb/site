@@ -13,6 +13,12 @@ const appointmentActionMessage = document.querySelector("#appointment-action-mes
 const confirmAppointmentActionButton = document.querySelector("#confirm-appointment-action");
 const backAppointmentActionButton = document.querySelector("#back-appointment-action");
 const closeAppointmentActionButton = document.querySelector("#close-appointment-action");
+const commissionAdjustModal = document.querySelector("#commission-adjust-modal");
+const commissionAdjustForm = document.querySelector("#commission-adjust-form");
+const commissionAdjustMessage = document.querySelector("#commission-adjust-message");
+const confirmCommissionAdjustButton = document.querySelector("#confirm-commission-adjust");
+const cancelCommissionAdjustButton = document.querySelector("#cancel-commission-adjust");
+const closeCommissionAdjustButton = document.querySelector("#close-commission-adjust");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
@@ -23,6 +29,8 @@ let currentUserRole = null;
 let appointmentAction = null;
 let appointmentActionSaving = false;
 let servicesRequestId = 0;
+let commissionBeingAdjusted = null;
+let commissionAdjustSaving = false;
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -902,6 +910,308 @@ function setupFinanceFilters(defaultDate) {
   });
 }
 
+function getCommissionFilters() {
+  const status = document.querySelector("#commissions-status").value;
+  return {
+    startDate: document.querySelector("#commissions-start-date").value,
+    endDate: document.querySelector("#commissions-end-date").value,
+    professionalId: document.querySelector("#commissions-professional").value || null,
+    statuses: status === "todas" ? null : [status]
+  };
+}
+
+function renderCommissionCards(resumo = {}) {
+  const grid = document.createElement("div");
+  grid.className = "finance-card-grid";
+  [
+    ["Comissões", resumo.totalComissoes, false],
+    ["Total calculado", resumo.totalCalculado, true],
+    ["Pendente", resumo.totalPendente, true],
+    ["Pago", resumo.totalPago, true],
+    ["Cancelado", resumo.totalCancelado, true]
+  ].forEach(([label, value, monetary]) => {
+    grid.appendChild(createFinanceCard(label, value, monetary));
+  });
+  document.querySelector("#commissions-content").appendChild(grid);
+}
+
+function openCommissionAdjustModal(commission) {
+  commissionBeingAdjusted = commission;
+  commissionAdjustForm.reset();
+  showMessage(document.querySelector("#commissions-message"), "");
+  showMessage(commissionAdjustMessage, "");
+  setActionSummary("#commission-client", commission.clienteNome);
+  setActionSummary("#commission-professional", commission.profissionalNome);
+  setActionSummary("#commission-service", commission.servicoNome);
+  setActionSummary("#commission-current-value", formatCurrency(commission.valorComissao));
+  document.querySelector("#commission-new-value").value = commission.valorComissao ?? "";
+  commissionAdjustModal.hidden = false;
+  document.body.classList.add("modal-open");
+  document.querySelector("#commission-new-value").focus();
+}
+
+function closeCommissionAdjustModal() {
+  if (commissionAdjustSaving) return;
+  commissionAdjustModal.hidden = true;
+  document.body.classList.remove("modal-open");
+  commissionBeingAdjusted = null;
+  showMessage(commissionAdjustMessage, "");
+}
+
+async function submitCommissionAdjust(event) {
+  event.preventDefault();
+  if (currentUserRole !== "admin" || !commissionBeingAdjusted || commissionAdjustSaving) return;
+
+  const newValue = normalizeAmount(document.querySelector("#commission-new-value").value);
+  const reason = document.querySelector("#commission-adjust-reason").value.trim();
+  if (!Number.isFinite(newValue) || newValue < 0) {
+    showMessage(commissionAdjustMessage, "O novo valor da comissão deve ser igual ou maior que zero.");
+    return;
+  }
+  if (!reason) {
+    showMessage(commissionAdjustMessage, "Informe o motivo do ajuste.");
+    return;
+  }
+
+  commissionAdjustSaving = true;
+  confirmCommissionAdjustButton.disabled = true;
+  cancelCommissionAdjustButton.disabled = true;
+  closeCommissionAdjustButton.disabled = true;
+  confirmCommissionAdjustButton.textContent = "Salvando...";
+  showMessage(commissionAdjustMessage, "");
+
+  try {
+    await callAppointmentRpc("ajustar_comissao_manual_admin", {
+      p_comissao_id: commissionBeingAdjusted.id,
+      p_valor_comissao: newValue,
+      p_motivo: reason
+    });
+    commissionAdjustSaving = false;
+    closeCommissionAdjustModal();
+    await loadCommissions();
+    showMessage(document.querySelector("#commissions-message"), "Comissão ajustada com sucesso!", "success");
+  } catch (error) {
+    console.error("Erro ao ajustar comissão:", error);
+    showMessage(commissionAdjustMessage, readableError(error, "Não foi possível ajustar a comissão."));
+  } finally {
+    commissionAdjustSaving = false;
+    confirmCommissionAdjustButton.disabled = false;
+    cancelCommissionAdjustButton.disabled = false;
+    closeCommissionAdjustButton.disabled = false;
+    confirmCommissionAdjustButton.textContent = "Confirmar";
+  }
+}
+
+async function markCommissionPaid(button, commission) {
+  if (currentUserRole !== "admin") return;
+  if (!window.confirm("Marcar esta comissão como paga?")) return;
+
+  const rowButtons = [...button.closest("tr").querySelectorAll("button")];
+  const originalText = button.textContent;
+  rowButtons.forEach((item) => { item.disabled = true; });
+  button.textContent = "Salvando...";
+  showMessage(document.querySelector("#commissions-message"), "");
+  try {
+    await callAppointmentRpc("marcar_comissoes_pagas_admin", {
+      p_comissao_ids: [commission.id],
+      p_notes: "Comissão marcada como paga pelo painel administrativo."
+    });
+    await loadCommissions();
+    showMessage(document.querySelector("#commissions-message"), "Comissão marcada como paga!", "success");
+  } catch (error) {
+    console.error("Erro ao marcar comissão como paga:", error);
+    showMessage(
+      document.querySelector("#commissions-message"),
+      readableError(error, "Não foi possível marcar a comissão como paga.")
+    );
+    if (button.isConnected) {
+      rowButtons.forEach((item) => { item.disabled = false; });
+      button.textContent = originalText;
+    }
+  }
+}
+
+function createCommissionActions(commission) {
+  const container = document.createElement("div");
+  container.className = "commission-row-actions";
+  const status = String(commission.status || "").toLowerCase();
+  if (status === "calculada" || status === "aprovada") {
+    const adjust = createActionButton("Ajustar", "commission-adjust-button", () => {
+      openCommissionAdjustModal(commission);
+    });
+    const pay = createActionButton("Marcar como paga", "commission-pay-button", (event) => {
+      markCommissionPaid(event.currentTarget, commission);
+    });
+    container.append(adjust, pay);
+  } else {
+    const state = document.createElement("span");
+    state.className = `commission-state commission-state-${status}`;
+    state.textContent = status === "paga"
+      ? "Comissão paga"
+      : status === "cancelada" ? "Comissão cancelada" : displayValue(commission.status);
+    container.appendChild(state);
+  }
+  return container;
+}
+
+function renderCommissionItems(items) {
+  const section = document.createElement("section");
+  section.className = "finance-table-section";
+  const heading = document.createElement("h3");
+  heading.textContent = "Comissões detalhadas";
+  section.appendChild(heading);
+  if (!Array.isArray(items) || items.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "finance-empty-state";
+    empty.textContent = "Nenhuma comissão encontrada neste período.";
+    section.appendChild(empty);
+    return section;
+  }
+
+  const columns = [
+    ["Data", (item) => `${displayValue(item.dataBr)} ${displayValue(item.horaInicio)}`],
+    ["Cliente", (item) => item.clienteNome],
+    ["Profissional", (item) => item.profissionalNome],
+    ["Serviço", (item) => item.servicoNome],
+    ["Valor serviço", (item) => formatCurrency(item.valorServico)],
+    ["Recebido", (item) => formatCurrency(item.valorRecebido)],
+    ["Base", (item) => formatCurrency(item.baseCalculo)],
+    ["Cálculo", (item) => item.calculationType],
+    ["Percentual", (item) => item.commissionPercent == null ? "—" : `${item.commissionPercent}%`],
+    ["Valor fixo", (item) => item.fixedAmount == null ? "—" : formatCurrency(item.fixedAmount)],
+    ["Comissão", (item) => formatCurrency(item.valorComissao)],
+    ["Status", (item) => item.status],
+    ["Observações", (item) => item.notes]
+  ];
+  const wrapper = document.createElement("div");
+  wrapper.className = "finance-table-wrapper";
+  const table = document.createElement("table");
+  table.className = "finance-table commission-table";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  columns.concat([["Ações", null]]).forEach(([label]) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  head.appendChild(headRow);
+  const body = document.createElement("tbody");
+  items.forEach((commission) => {
+    const row = document.createElement("tr");
+    columns.forEach(([, getter], index) => {
+      const cell = document.createElement("td");
+      cell.textContent = displayValue(getter(commission));
+      if ([4, 5, 6, 9, 10].includes(index)) cell.classList.add("finance-money");
+      if (index === 12) cell.classList.add("commission-notes");
+      row.appendChild(cell);
+    });
+    const actionCell = document.createElement("td");
+    actionCell.appendChild(createCommissionActions(commission));
+    row.appendChild(actionCell);
+    body.appendChild(row);
+  });
+  table.append(head, body);
+  wrapper.appendChild(table);
+  section.appendChild(wrapper);
+  return section;
+}
+
+function renderCommissions(data) {
+  const content = document.querySelector("#commissions-content");
+  content.replaceChildren();
+  renderCommissionCards(data.resumo || {});
+  content.appendChild(createFinanceTable("Por profissional", [
+    { label: "Profissional", value: "profissionalNome" },
+    { label: "Quantidade", value: "quantidade" },
+    { label: "Serviços", value: "totalServicos", currency: true },
+    { label: "Recebido", value: "totalRecebido", currency: true },
+    { label: "Comissão", value: "totalComissao", currency: true },
+    { label: "Pendente", value: "totalPendente", currency: true },
+    { label: "Pago", value: "totalPago", currency: true }
+  ], data.porProfissional));
+  content.appendChild(renderCommissionItems(data.items));
+}
+
+async function loadCommissions(event) {
+  event?.preventDefault();
+  if (currentUserRole !== "admin") return false;
+  const button = document.querySelector("#load-commissions-button");
+  const message = document.querySelector("#commissions-message");
+  const filters = getCommissionFilters();
+  setBusy(button, true, "Carregando...");
+  showMessage(message, "");
+  try {
+    const { data, error } = await supabaseClient.rpc("listar_comissoes_admin", {
+      p_data_inicio: filters.startDate,
+      p_data_fim: filters.endDate,
+      p_profissional_id: filters.professionalId,
+      p_statuses: filters.statuses
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    const resultError = rpcResultError(result);
+    if (resultError) throw resultError;
+    renderCommissions(result || {});
+    return true;
+  } catch (error) {
+    console.error("Erro ao carregar comissões:", error);
+    document.querySelector("#commissions-content").replaceChildren();
+    showMessage(message, readableError(error, "Não foi possível carregar as comissões."));
+    return false;
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+async function generateCommissions() {
+  if (currentUserRole !== "admin") return;
+  const button = document.querySelector("#generate-commissions-button");
+  const message = document.querySelector("#commissions-message");
+  const filters = getCommissionFilters();
+  setBusy(button, true, "Gerando...");
+  showMessage(message, "");
+  try {
+    const { data, error } = await supabaseClient.rpc("gerar_comissoes_periodo_admin", {
+      p_data_inicio: filters.startDate,
+      p_data_fim: filters.endDate,
+      p_profissional_id: filters.professionalId
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    const resultError = rpcResultError(result);
+    if (resultError) throw resultError;
+    const loaded = await loadCommissions();
+    if (!loaded) return;
+
+    const errorsList = Array.isArray(result?.errosLista) ? result.errosLista : [];
+    const errorDetails = errorsList.length
+      ? ` Detalhes: ${errorsList.map((item) => typeof item === "string" ? item : JSON.stringify(item)).join("; ")}`
+      : "";
+    const text = `Concluídos analisados: ${numberValue(result?.totalAgendamentosConcluidos)}. `
+      + `Comissões geradas: ${numberValue(result?.comissoesGeradas)}. `
+      + `Erros: ${numberValue(result?.erros)}.${errorDetails}`;
+    showMessage(message, text, numberValue(result?.erros) > 0 ? "info" : "success");
+  } catch (error) {
+    console.error("Erro ao gerar comissões:", error);
+    showMessage(message, readableError(error, "Não foi possível gerar as comissões."));
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+function setupCommissionFilters(defaultDate) {
+  document.querySelector("#commissions-start-date").value = defaultDate;
+  document.querySelector("#commissions-end-date").value = defaultDate;
+  const select = document.querySelector("#commissions-professional");
+  activeProfessionals.forEach((professional) => {
+    const option = document.createElement("option");
+    option.value = professional.id;
+    option.textContent = professional.nome || professional.name || "Sem nome";
+    select.appendChild(option);
+  });
+}
+
 async function initializeAdmin() {
   try {
     const access = await requireAdminAccess();
@@ -922,6 +1232,9 @@ async function initializeAdmin() {
       document.querySelector("#finance-section").hidden = false;
       setupFinanceFilters(today);
       await loadFinancialSummary();
+      document.querySelector("#commissions-section").hidden = false;
+      setupCommissionFilters(today);
+      await loadCommissions();
     }
   } catch (error) {
     showMessage(adminMessage, readableError(error, "Não foi possível iniciar o painel."));
@@ -937,6 +1250,8 @@ document.querySelector("#servico").addEventListener("change", () => {
   resetAvailableTimes("Clique em Buscar horários para ver a disponibilidade.");
 });
 document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
+document.querySelector("#commissions-form").addEventListener("submit", loadCommissions);
+document.querySelector("#generate-commissions-button").addEventListener("click", generateCommissions);
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);
 closeCompletionButton.addEventListener("click", closeCompletionModal);
@@ -954,5 +1269,14 @@ appointmentActionModal.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !appointmentActionModal.hidden) closeAppointmentActionModal();
+});
+commissionAdjustForm.addEventListener("submit", submitCommissionAdjust);
+cancelCommissionAdjustButton.addEventListener("click", closeCommissionAdjustModal);
+closeCommissionAdjustButton.addEventListener("click", closeCommissionAdjustModal);
+commissionAdjustModal.addEventListener("click", (event) => {
+  if (event.target === commissionAdjustModal) closeCommissionAdjustModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();
 });
 initializeAdmin();
