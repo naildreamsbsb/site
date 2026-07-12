@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel administrativo | Nail Dreams</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>Nail Dreams</strong>
+      <span>Painel administrativo</span>
+    </div>
+    <div class="user-area">
+      <span id="logged-user">Carregando usuário...</span>
+      <button id="logout-button" class="button-secondary" type="button">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <p id="admin-message" class="message" role="alert" aria-live="polite"></p>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h1>Agenda do período</h1>
+          <p>Consulte os agendamentos por intervalo de datas.</p>
+        </div>
+      </div>
+      <form id="agenda-form" class="form-row">
+        <label>Data inicial<input id="data-inicio" type="date" required></label>
+        <label>Data final<input id="data-fim" type="date" required></label>
+        <button id="load-agenda-button" type="submit">Carregar agenda</button>
+      </form>
+      <div id="agenda-list" class="agenda-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Novo agendamento</h2>
+          <p>Informe os dados e escolha um horário disponível.</p>
+        </div>
+      </div>
+      <form id="appointment-form" class="appointment-form">
+        <label>Profissional<select id="profissional" required><option value="">Selecione</option></select></label>
+        <label>Serviço<select id="servico" required><option value="">Selecione</option></select></label>
+        <label>Nome da cliente<input id="cliente-nome" type="text" required></label>
+        <label>Telefone<input id="cliente-phone" type="tel" required></label>
+        <label>E-mail<input id="cliente-email" type="email"></label>
+        <label>Data<input id="appointment-date" type="date" required></label>
+        <div class="form-action"><button id="search-times-button" type="button">Buscar horários</button></div>
+        <div class="time-section full-width">
+          <span class="field-label">Horários disponíveis</span>
+          <div id="available-times" class="time-buttons"><span class="muted">Preencha profissional, serviço e data.</span></div>
+          <input id="selected-time" type="hidden">
+          <p id="selected-time-label" class="selected-time"></p>
+        </div>
+        <div class="full-width"><button id="create-button" type="submit" disabled>Criar agendamento</button></div>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

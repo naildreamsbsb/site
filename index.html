@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login administrativo | Nail Dreams</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="brand">
+      <span class="brand-mark">ND</span>
+      <div>
+        <h1>Nail Dreams</h1>
+        <p>Painel administrativo</p>
+      </div>
+    </div>
+
+    <form id="login-form" class="stack">
+      <label>
+        E-mail
+        <input id="email" name="email" type="email" autocomplete="email" required>
+      </label>
+      <label>
+        Senha
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button id="login-button" type="submit">Entrar</button>
+    </form>
+    <p id="login-message" class="message" role="alert" aria-live="polite"></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
