@@ -10,6 +10,9 @@ const closeCompletionButton = document.querySelector("#close-completion-modal");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
+let completionAllowedProfessionalIds = new Set();
+let activeProfessionals = [];
+let activeServices = [];
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -114,26 +117,97 @@ function setCompletionSummary(id, value) {
   document.querySelector(id).textContent = displayValue(value);
 }
 
-function openCompletionModal(appointment) {
+function findCatalogId(items, itemName, idFields, nameFields) {
+  const directId = idFields.map((field) => itemName[field]).find(Boolean);
+  if (directId) return directId;
+  const currentName = nameFields.map((field) => itemName[field]).find(Boolean);
+  return items.find((item) => nameFields.some((field) => item[field] === currentName))?.id || null;
+}
+
+function getAppointmentProfessionalId(appointment) {
+  return findCatalogId(
+    activeProfessionals,
+    appointment,
+    ["profissionalId", "profissional_id"],
+    ["profissionalNome", "nome", "name"]
+  );
+}
+
+function getAppointmentServiceId(appointment) {
+  return findCatalogId(
+    activeServices,
+    appointment,
+    ["servicoId", "servico_id"],
+    ["servicoNome", "nome", "name"]
+  );
+}
+
+async function loadCompletionProfessionals(appointment) {
+  const select = document.querySelector("#completion-professional");
+  const serviceId = getAppointmentServiceId(appointment);
+  const currentProfessionalId = getAppointmentProfessionalId(appointment);
+  if (!serviceId) throw new Error("Não foi possível identificar o serviço deste agendamento.");
+
+  const { data: links, error: linksError } = await supabaseClient
+    .from("profissional_servicos")
+    .select("profissional_id")
+    .eq("servico_id", serviceId);
+  if (linksError) throw linksError;
+  if (completionAppointment !== appointment) return;
+
+  const allowedIds = [...new Set((links || []).map((item) => item.profissional_id).filter(Boolean))];
+  completionAllowedProfessionalIds = new Set(allowedIds);
+  const professionals = activeProfessionals.filter((item) => allowedIds.includes(item.id));
+  select.replaceChildren();
+  professionals.forEach((professional) => {
+    const option = document.createElement("option");
+    option.value = professional.id;
+    option.textContent = professional.nome || professional.name || "Sem nome";
+    select.appendChild(option);
+  });
+
+  if (!professionals.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Nenhuma profissional disponível";
+    select.appendChild(option);
+    throw new Error("Nenhuma profissional ativa realiza este serviço.");
+  }
+  if (!professionals.some((item) => item.id === currentProfessionalId)) {
+    throw new Error("A profissional atual não está disponível para este serviço.");
+  }
+
+  select.value = currentProfessionalId;
+  select.disabled = false;
+  confirmCompletionButton.disabled = false;
+}
+
+async function openCompletionModal(appointment) {
   completionAppointment = appointment;
+  completionAllowedProfessionalIds = new Set();
   completionForm.reset();
+  const professionalSelect = document.querySelector("#completion-professional");
+  professionalSelect.replaceChildren(new Option("Carregando...", ""));
+  professionalSelect.disabled = true;
+  confirmCompletionButton.disabled = true;
   showMessage(agendaActionMessage, "");
   showMessage(completionMessage, "");
   setCompletionSummary("#completion-client", appointment.clienteNome);
-  setCompletionSummary("#completion-professional", appointment.profissionalNome);
-  setCompletionSummary("#completion-service", appointment.servicoNome);
-  setCompletionSummary("#completion-date", appointment.dataBr);
-  setCompletionSummary(
-    "#completion-time",
-    `${displayValue(appointment.horaInicio)} – ${displayValue(appointment.horaFim)}`
-  );
   setCompletionSummary("#completion-total", appointment.totalPrice);
   document.querySelector("#completion-amount").value = appointment.totalPrice ?? "";
   document.querySelector("#completion-method").value = "Pix";
   document.querySelector("#completion-status").value = "pago";
   completionModal.hidden = false;
   document.body.classList.add("modal-open");
-  document.querySelector("#completion-amount").focus();
+  try {
+    await loadCompletionProfessionals(appointment);
+    if (completionAppointment === appointment) professionalSelect.focus();
+  } catch (error) {
+    console.error("Erro ao carregar profissionais do atendimento:", error);
+    if (completionAppointment === appointment) {
+      showMessage(completionMessage, readableError(error, "Não foi possível carregar as profissionais."));
+    }
+  }
 }
 
 function closeCompletionModal() {
@@ -141,6 +215,7 @@ function closeCompletionModal() {
   completionModal.hidden = true;
   document.body.classList.remove("modal-open");
   completionAppointment = null;
+  completionAllowedProfessionalIds = new Set();
   showMessage(completionMessage, "");
 }
 
@@ -149,6 +224,7 @@ async function handleCompletionSubmit(event) {
   if (!completionAppointment || completionSaving) return;
 
   const amountPaid = normalizeAmount(document.querySelector("#completion-amount").value);
+  const professionalId = document.querySelector("#completion-professional").value;
   const paymentMethod = document.querySelector("#completion-method").value;
   const paymentStatus = document.querySelector("#completion-status").value;
   const notes = document.querySelector("#completion-notes").value.trim();
@@ -156,6 +232,10 @@ async function handleCompletionSubmit(event) {
 
   if (!Number.isFinite(amountPaid) || amountPaid < 0) {
     showMessage(completionMessage, "Informe um valor pago válido, igual ou maior que zero.");
+    return;
+  }
+  if (!professionalId || !completionAllowedProfessionalIds.has(professionalId)) {
+    showMessage(completionMessage, "Selecione uma profissional válida para este serviço.");
     return;
   }
   if (paymentStatus === "pago" && amountPaid <= 0) {
@@ -171,6 +251,15 @@ async function handleCompletionSubmit(event) {
   showMessage(completionMessage, "");
 
   try {
+    const originalProfessionalId = getAppointmentProfessionalId(completionAppointment);
+    if (professionalId !== originalProfessionalId) {
+      const { error: updateError } = await supabaseClient
+        .from("agendamentos")
+        .update({ profissional_id: professionalId })
+        .eq("id", completionAppointment.id);
+      if (updateError) throw updateError;
+    }
+
     await callAppointmentRpc("marcar_agendamento_concluido_staff", {
       p_agendamento_id: completionAppointment.id,
       p_amount_paid: amountPaid,
@@ -192,7 +281,7 @@ async function handleCompletionSubmit(event) {
     confirmCompletionButton.disabled = false;
     cancelCompletionButton.disabled = false;
     closeCompletionButton.disabled = false;
-    confirmCompletionButton.textContent = "Confirmar conclusão";
+    confirmCompletionButton.textContent = "Confirmar";
   }
 }
 
@@ -211,16 +300,18 @@ function renderCardActions(card, appointment) {
   const actions = document.createElement("div");
   actions.className = "card-actions";
 
-  actions.appendChild(createActionButton("Confirmar", "action-confirm", (event) => {
-    runAppointmentAction(event.currentTarget, async () => {
-      await callAppointmentRpc("confirmar_agendamento_staff", {
-        p_agendamento_id: appointment.id,
-        p_deposit_status: "pago",
-        p_notes: "Confirmado pelo painel administrativo."
+  if (currentStatus !== "confirmado") {
+    actions.appendChild(createActionButton("Confirmar", "action-confirm", (event) => {
+      runAppointmentAction(event.currentTarget, async () => {
+        await callAppointmentRpc("confirmar_agendamento_staff", {
+          p_agendamento_id: appointment.id,
+          p_deposit_status: "pago",
+          p_notes: "Confirmado pelo painel administrativo."
+        });
+        return "Agendamento confirmado com sucesso.";
       });
-      return "Agendamento confirmado com sucesso.";
-    });
-  }));
+    }));
+  }
 
   actions.appendChild(createActionButton("Concluir", "action-complete", () => {
     openCompletionModal(appointment);
@@ -334,8 +425,10 @@ async function loadCatalogs() {
   ]);
   if (professionalsResult.error) throw professionalsResult.error;
   if (servicesResult.error) throw servicesResult.error;
-  fillSelect("#profissional", professionalsResult.data || [], ["nome", "name"]);
-  fillSelect("#servico", servicesResult.data || [], ["nome", "name"]);
+  activeProfessionals = professionalsResult.data || [];
+  activeServices = servicesResult.data || [];
+  fillSelect("#profissional", activeProfessionals, ["nome", "name"]);
+  fillSelect("#servico", activeServices, ["nome", "name"]);
 }
 
 function normalizeTime(item) {

@@ -76,11 +76,8 @@
 
       <div class="completion-summary">
         <div><span>Cliente</span><strong id="completion-client"></strong></div>
-        <div><span>Profissional</span><strong id="completion-professional"></strong></div>
-        <div><span>Serviço</span><strong id="completion-service"></strong></div>
-        <div><span>Data</span><strong id="completion-date"></strong></div>
-        <div><span>Horário</span><strong id="completion-time"></strong></div>
-        <div><span>Valor total</span><strong id="completion-total"></strong></div>
+        <label>Profissional<select id="completion-professional" form="completion-form" required disabled><option value="">Carregando...</option></select></label>
+        <div><span>Valor</span><strong id="completion-total"></strong></div>
       </div>
 
       <form id="completion-form" class="completion-form">
@@ -110,7 +107,7 @@
         </div>
         <div class="modal-actions">
           <button id="cancel-completion" class="modal-secondary-button" type="button">Cancelar</button>
-          <button id="confirm-completion" type="submit">Confirmar conclusão</button>
+          <button id="confirm-completion" type="submit">Confirmar</button>
         </div>
       </form>
     </section>
