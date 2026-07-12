@@ -37,6 +37,25 @@
       <div id="agenda-list" class="agenda-grid"></div>
     </section>
 
+    <section id="finance-section" class="panel finance-section" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>Resumo financeiro / Caixa</h2>
+          <p>Acompanhe recebimentos e movimentações do período.</p>
+        </div>
+      </div>
+      <p id="finance-message" class="message" role="alert" aria-live="polite"></p>
+      <form id="finance-form" class="finance-filters">
+        <label>Data inicial<input id="finance-start-date" type="date" required></label>
+        <label>Data final<input id="finance-end-date" type="date" required></label>
+        <label>Profissional
+          <select id="finance-professional"><option value="">Todas</option></select>
+        </label>
+        <button id="load-finance-button" type="submit">Carregar caixa</button>
+      </form>
+      <div id="finance-content"></div>
+    </section>
+
     <section class="panel">
       <div class="section-heading">
         <div>

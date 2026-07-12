@@ -13,6 +13,7 @@ let completionSaving = false;
 let completionAllowedProfessionalIds = new Set();
 let activeProfessionals = [];
 let activeServices = [];
+let currentUserRole = null;
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -46,6 +47,18 @@ function todayInSaoPaulo() {
 
 function displayValue(value) {
   return value === null || value === undefined || value === "" ? "—" : String(value);
+}
+
+function numberValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(numberValue(value));
 }
 
 function addDetail(container, label, value) {
@@ -560,10 +573,183 @@ async function createAppointment(event) {
   }
 }
 
+function createFinanceCard(label, value, monetary = false) {
+  const card = document.createElement("article");
+  card.className = monetary ? "finance-card finance-card-value" : "finance-card";
+  const title = document.createElement("span");
+  const content = document.createElement("strong");
+  title.textContent = label;
+  content.textContent = monetary ? formatCurrency(value) : numberValue(value).toLocaleString("pt-BR");
+  card.append(title, content);
+  return card;
+}
+
+function renderFinanceCards(resumo = {}) {
+  const grid = document.createElement("div");
+  grid.className = "finance-card-grid";
+  const totalCanceled = numberValue(resumo.totalCanceladoCliente)
+    + numberValue(resumo.totalCanceladoStudio);
+  const cards = [
+    ["Agendamentos", resumo.totalAgendamentos],
+    ["Concluídos", resumo.totalConcluidos],
+    ["Não compareceu", resumo.totalNaoCompareceu],
+    ["Cancelados", totalCanceled],
+    ["Receita concluída", resumo.receitaBrutaConcluida, true],
+    ["Total recebido", resumo.totalRecebido, true],
+    ["Pendente", resumo.totalPendentePagamento, true],
+    ["Sinais pendentes", resumo.totalSinalPendente, true],
+    ["Ticket médio", resumo.ticketMedioConcluido, true]
+  ];
+  cards.forEach(([label, value, monetary]) => {
+    grid.appendChild(createFinanceCard(label, value, monetary));
+  });
+  document.querySelector("#finance-content").appendChild(grid);
+}
+
+function createFinanceTable(title, columns, rows) {
+  const section = document.createElement("section");
+  section.className = "finance-table-section";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  section.appendChild(heading);
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "finance-table-empty";
+    empty.textContent = "Nenhum dado disponível.";
+    section.appendChild(empty);
+    return section;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "finance-table-wrapper";
+  const table = document.createElement("table");
+  table.className = "finance-table";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  columns.forEach((column) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = column.label;
+    headRow.appendChild(cell);
+  });
+  head.appendChild(headRow);
+
+  const body = document.createElement("tbody");
+  rows.forEach((row) => {
+    const tableRow = document.createElement("tr");
+    columns.forEach((column) => {
+      const cell = document.createElement("td");
+      const rawValue = typeof column.value === "function" ? column.value(row) : row[column.value];
+      cell.textContent = column.currency ? formatCurrency(rawValue) : displayValue(rawValue);
+      if (column.currency) cell.className = "finance-money";
+      tableRow.appendChild(cell);
+    });
+    body.appendChild(tableRow);
+  });
+  table.append(head, body);
+  wrapper.appendChild(table);
+  section.appendChild(wrapper);
+  return section;
+}
+
+function renderFinanceTables(data) {
+  const content = document.querySelector("#finance-content");
+  content.appendChild(createFinanceTable("Por forma de pagamento", [
+    { label: "Forma", value: "formaPagamento" },
+    { label: "Quantidade", value: "quantidade" },
+    { label: "Total recebido", value: "totalRecebido", currency: true }
+  ], data.porPagamento));
+
+  content.appendChild(createFinanceTable("Por profissional", [
+    { label: "Profissional", value: "profissionalNome" },
+    { label: "Agendamentos", value: "totalAgendamentos" },
+    { label: "Concluídos", value: "totalConcluidos" },
+    { label: "Receita", value: "receitaBrutaConcluida", currency: true },
+    { label: "Recebido", value: "totalRecebido", currency: true }
+  ], data.porProfissional));
+
+  content.appendChild(createFinanceTable("Por serviço", [
+    { label: "Serviço", value: "servicoNome" },
+    { label: "Categoria", value: "servicoCategoria" },
+    { label: "Agendamentos", value: "totalAgendamentos" },
+    { label: "Concluídos", value: "totalConcluidos" },
+    { label: "Receita", value: "receitaBrutaConcluida", currency: true },
+    { label: "Recebido", value: "totalRecebido", currency: true }
+  ], data.porServico));
+
+  content.appendChild(createFinanceTable("Movimentações do período", [
+    { label: "Data", value: (item) => `${displayValue(item.dataBr)} ${displayValue(item.horaInicio)}` },
+    { label: "Cliente", value: "clienteNome" },
+    { label: "Profissional", value: "profissionalNome" },
+    { label: "Serviço", value: "servicoNome" },
+    { label: "Status", value: "status" },
+    { label: "Total", value: "totalPrice", currency: true },
+    { label: "Pago", value: "amountPaid", currency: true },
+    { label: "Status pag.", value: "paymentStatus" },
+    { label: "Forma", value: "paymentMethod" }
+  ], data.items));
+}
+
+function renderFinancialSummary(data) {
+  const content = document.querySelector("#finance-content");
+  content.replaceChildren();
+  if (!Array.isArray(data.items) || data.items.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "finance-empty-state";
+    empty.textContent = "Nenhuma movimentação financeira encontrada neste período.";
+    content.appendChild(empty);
+  }
+  renderFinanceCards(data.resumo || {});
+  renderFinanceTables(data);
+}
+
+async function loadFinancialSummary(event) {
+  event?.preventDefault();
+  if (currentUserRole !== "admin") return;
+
+  const button = document.querySelector("#load-finance-button");
+  const message = document.querySelector("#finance-message");
+  setBusy(button, true, "Carregando...");
+  showMessage(message, "");
+
+  try {
+    const { data, error } = await supabaseClient.rpc("resumo_financeiro_admin", {
+      p_data_inicio: document.querySelector("#finance-start-date").value,
+      p_data_fim: document.querySelector("#finance-end-date").value,
+      p_profissional_id: document.querySelector("#finance-professional").value || null
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    const resultError = rpcResultError(result);
+    if (resultError) throw resultError;
+    renderFinancialSummary(result || {});
+  } catch (error) {
+    console.error("Erro ao carregar resumo financeiro:", error);
+    document.querySelector("#finance-content").replaceChildren();
+    showMessage(message, readableError(error, "Não foi possível carregar o resumo financeiro."));
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+function setupFinanceFilters(defaultDate) {
+  document.querySelector("#finance-start-date").value = defaultDate;
+  document.querySelector("#finance-end-date").value = defaultDate;
+  const select = document.querySelector("#finance-professional");
+  activeProfessionals.forEach((professional) => {
+    const option = document.createElement("option");
+    option.value = professional.id;
+    option.textContent = professional.nome || professional.name || "Sem nome";
+    select.appendChild(option);
+  });
+}
+
 async function initializeAdmin() {
   try {
     const access = await requireAdminAccess();
     if (!access) return;
+    currentUserRole = access.profile.role;
     const displayName = access.profile.nome || access.profile.name || access.profile.full_name;
     document.querySelector("#logged-user").textContent = displayName
       ? `${displayName} · ${access.session.user.email}`
@@ -575,6 +761,11 @@ async function initializeAdmin() {
     document.querySelector("#appointment-date").value = today;
     await loadCatalogs();
     await loadAgenda();
+    if (currentUserRole === "admin") {
+      document.querySelector("#finance-section").hidden = false;
+      setupFinanceFilters(today);
+      await loadFinancialSummary();
+    }
   } catch (error) {
     showMessage(adminMessage, readableError(error, "Não foi possível iniciar o painel."));
   }
@@ -584,6 +775,7 @@ document.querySelector("#logout-button").addEventListener("click", () => signOut
 document.querySelector("#agenda-form").addEventListener("submit", loadAgenda);
 document.querySelector("#search-times-button").addEventListener("click", searchAvailableTimes);
 document.querySelector("#appointment-form").addEventListener("submit", createAppointment);
+document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);
 closeCompletionButton.addEventListener("click", closeCompletionModal);
