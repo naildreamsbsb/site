@@ -31,6 +31,12 @@ h1, h2, h3, p { margin-top: 0; }
 .brand p { margin: .15rem 0 0; color: var(--muted); }
 .brand-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; font-weight: 800; }
 .stack { display: grid; gap: 1rem; }
+.reset-card h1 { margin-bottom: .45rem; }
+.reset-intro { margin-bottom: 1.5rem; color: var(--muted); }
+.text-button { padding: .25rem; color: var(--primary); background: transparent; }
+.text-button:hover:not(:disabled) { color: var(--primary-dark); background: transparent; text-decoration: underline; }
+.back-link { display: block; margin-top: 1rem; color: var(--primary); text-align: center; font-weight: 650; text-decoration: none; }
+.back-link:hover { color: var(--primary-dark); text-decoration: underline; }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem max(1rem, calc((100% - 1180px) / 2)); border-bottom: 1px solid var(--border); background: var(--surface); }
 .topbar > div:first-child { display: flex; flex-direction: column; }

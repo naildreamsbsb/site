@@ -71,6 +71,36 @@ async function handleLogin(event) {
   }
 }
 
+async function handleForgotPassword() {
+  const emailInput = document.querySelector("#email");
+  const message = document.querySelector("#login-message");
+  const button = document.querySelector("#forgot-password-button");
+  const email = emailInput.value.trim();
+
+  if (!email || !emailInput.checkValidity()) {
+    showMessage(message, "Informe um e-mail válido para redefinir sua senha.");
+    emailInput.focus();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  showMessage(message, "", "info");
+
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password.html`
+    });
+    if (error) throw error;
+    showMessage(message, "Enviamos um link de redefinição para seu e-mail.", "success");
+  } catch (error) {
+    showMessage(message, readableError(error, "Não foi possível enviar o link de redefinição."));
+  } finally {
+    button.disabled = false;
+    button.textContent = "Esqueci minha senha";
+  }
+}
+
 async function initializeLogin() {
   const params = new URLSearchParams(window.location.search);
   const message = document.querySelector("#login-message");
@@ -90,5 +120,6 @@ async function initializeLogin() {
 const loginForm = document.querySelector("#login-form");
 if (loginForm) {
   loginForm.addEventListener("submit", handleLogin);
+  document.querySelector("#forgot-password-button").addEventListener("click", handleForgotPassword);
   initializeLogin();
 }
