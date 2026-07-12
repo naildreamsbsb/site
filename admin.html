@@ -66,7 +66,7 @@
       <p id="appointment-message" class="message" role="alert" aria-live="polite"></p>
       <form id="appointment-form" class="appointment-form">
         <label>Profissional<select id="profissional" required><option value="">Selecione</option></select></label>
-        <label>Serviço<select id="servico" required><option value="">Selecione</option></select></label>
+        <label>Serviço<select id="servico" required disabled><option value="">Selecione uma profissional primeiro</option></select></label>
         <label>Nome da cliente<input id="cliente-nome" type="text" required></label>
         <label>Telefone<input id="cliente-phone" type="tel" required></label>
         <label>E-mail<input id="cliente-email" type="email"></label>
@@ -127,6 +127,34 @@
         <div class="modal-actions">
           <button id="cancel-completion" class="modal-secondary-button" type="button">Cancelar</button>
           <button id="confirm-completion" type="submit">Confirmar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="appointment-action-modal" class="modal-overlay" hidden>
+    <section class="completion-modal action-modal" role="dialog" aria-modal="true" aria-labelledby="appointment-action-title">
+      <div class="modal-heading">
+        <div>
+          <h2 id="appointment-action-title"></h2>
+          <p id="appointment-action-info"></p>
+        </div>
+        <button id="close-appointment-action" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+
+      <div class="action-summary">
+        <div><span>Cliente</span><strong id="action-client"></strong></div>
+        <div><span>Profissional</span><strong id="action-professional"></strong></div>
+        <div><span>Serviço</span><strong id="action-service"></strong></div>
+        <div><span>Data e horário</span><strong id="action-date-time"></strong></div>
+      </div>
+
+      <form id="appointment-action-form">
+        <p id="appointment-action-message" class="message" role="alert" aria-live="polite"></p>
+        <label><span id="appointment-action-field-label"></span><textarea id="appointment-action-notes" rows="4"></textarea></label>
+        <div class="modal-actions">
+          <button id="back-appointment-action" class="modal-secondary-button" type="button">Voltar</button>
+          <button id="confirm-appointment-action" type="submit">Confirmar</button>
         </div>
       </form>
     </section>

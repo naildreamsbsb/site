@@ -7,6 +7,12 @@ const completionMessage = document.querySelector("#completion-message");
 const confirmCompletionButton = document.querySelector("#confirm-completion");
 const cancelCompletionButton = document.querySelector("#cancel-completion");
 const closeCompletionButton = document.querySelector("#close-completion-modal");
+const appointmentActionModal = document.querySelector("#appointment-action-modal");
+const appointmentActionForm = document.querySelector("#appointment-action-form");
+const appointmentActionMessage = document.querySelector("#appointment-action-message");
+const confirmAppointmentActionButton = document.querySelector("#confirm-appointment-action");
+const backAppointmentActionButton = document.querySelector("#back-appointment-action");
+const closeAppointmentActionButton = document.querySelector("#close-appointment-action");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
@@ -14,6 +20,9 @@ let completionAllowedProfessionalIds = new Set();
 let activeProfessionals = [];
 let activeServices = [];
 let currentUserRole = null;
+let appointmentAction = null;
+let appointmentActionSaving = false;
+let servicesRequestId = 0;
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -164,7 +173,8 @@ async function loadCompletionProfessionals(appointment) {
   const { data: links, error: linksError } = await supabaseClient
     .from("profissional_servicos")
     .select("profissional_id")
-    .eq("servico_id", serviceId);
+    .eq("servico_id", serviceId)
+    .eq("active", true);
   if (linksError) throw linksError;
   if (completionAppointment !== appointment) return;
 
@@ -298,6 +308,102 @@ async function handleCompletionSubmit(event) {
   }
 }
 
+function setActionSummary(id, value) {
+  document.querySelector(id).textContent = displayValue(value);
+}
+
+function openAppointmentActionModal(appointment, mode) {
+  appointmentAction = { appointment, mode };
+  appointmentActionForm.reset();
+  showMessage(agendaActionMessage, "");
+  showMessage(appointmentActionMessage, "");
+  setActionSummary("#action-client", appointment.clienteNome);
+  setActionSummary("#action-professional", appointment.profissionalNome);
+  setActionSummary("#action-service", appointment.servicoNome);
+  setActionSummary(
+    "#action-date-time",
+    `${displayValue(appointment.dataBr)} às ${displayValue(appointment.horaInicio)}`
+  );
+
+  const isCancel = mode === "cancel";
+  document.querySelector("#appointment-action-title").textContent = isCancel
+    ? "Cancelar agendamento"
+    : "Cliente não compareceu";
+  document.querySelector("#appointment-action-info").textContent = isCancel
+    ? "Informe o motivo para registrar o cancelamento."
+    : "Use esta ação quando a cliente não comparecer ao horário agendado.";
+  document.querySelector("#appointment-action-field-label").textContent = isCancel
+    ? "Motivo do cancelamento"
+    : "Observação";
+
+  appointmentActionModal.hidden = false;
+  document.body.classList.add("modal-open");
+  document.querySelector("#appointment-action-notes").focus();
+}
+
+function openCancelModal(appointment) {
+  openAppointmentActionModal(appointment, "cancel");
+}
+
+function openNoShowModal(appointment) {
+  openAppointmentActionModal(appointment, "no-show");
+}
+
+function closeAppointmentActionModal() {
+  if (appointmentActionSaving) return;
+  appointmentActionModal.hidden = true;
+  document.body.classList.remove("modal-open");
+  appointmentAction = null;
+  showMessage(appointmentActionMessage, "");
+}
+
+async function submitAppointmentActionModal(event) {
+  event.preventDefault();
+  if (!appointmentAction || appointmentActionSaving) return;
+
+  const { appointment, mode } = appointmentAction;
+  const notes = document.querySelector("#appointment-action-notes").value.trim();
+  const isCancel = mode === "cancel";
+  appointmentActionSaving = true;
+  confirmAppointmentActionButton.disabled = true;
+  backAppointmentActionButton.disabled = true;
+  closeAppointmentActionButton.disabled = true;
+  confirmAppointmentActionButton.textContent = isCancel ? "Cancelando..." : "Salvando...";
+  showMessage(appointmentActionMessage, "");
+
+  try {
+    if (isCancel) {
+      await callAppointmentRpc("cancelar_agendamento", {
+        p_agendamento_id: appointment.id,
+        p_cancel_reason: notes || "Cancelado pelo painel administrativo."
+      });
+    } else {
+      await callAppointmentRpc("marcar_nao_compareceu_staff", {
+        p_agendamento_id: appointment.id,
+        p_notes: notes || "Cliente não compareceu."
+      });
+    }
+
+    appointmentActionSaving = false;
+    closeAppointmentActionModal();
+    await loadAgenda();
+    showMessage(
+      agendaActionMessage,
+      isCancel ? "Agendamento cancelado com sucesso!" : "Agendamento marcado como não compareceu.",
+      "success"
+    );
+  } catch (error) {
+    console.error(`Erro ao ${isCancel ? "cancelar agendamento" : "registrar ausência"}:`, error);
+    showMessage(appointmentActionMessage, readableError(error, "Não foi possível concluir a ação."));
+  } finally {
+    appointmentActionSaving = false;
+    confirmAppointmentActionButton.disabled = false;
+    backAppointmentActionButton.disabled = false;
+    closeAppointmentActionButton.disabled = false;
+    confirmAppointmentActionButton.textContent = "Confirmar";
+  }
+}
+
 function renderCardActions(card, appointment) {
   const currentStatus = String(appointment.status || "").toLowerCase();
 
@@ -330,28 +436,12 @@ function renderCardActions(card, appointment) {
     openCompletionModal(appointment);
   }));
 
-  actions.appendChild(createActionButton("Cancelar", "action-cancel", (event) => {
-    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
-    const reason = window.prompt("Motivo do cancelamento:");
-    runAppointmentAction(event.currentTarget, async () => {
-      await callAppointmentRpc("cancelar_agendamento", {
-        p_agendamento_id: appointment.id,
-        p_cancel_reason: reason?.trim() || "Cancelado pelo painel administrativo."
-      });
-      return "Agendamento cancelado com sucesso.";
-    });
+  actions.appendChild(createActionButton("Cancelar", "action-cancel", () => {
+    openCancelModal(appointment);
   }));
 
-  actions.appendChild(createActionButton("Não compareceu", "action-no-show", (event) => {
-    if (!window.confirm("Confirmar que a cliente não compareceu?")) return;
-    const notes = window.prompt("Observação:");
-    runAppointmentAction(event.currentTarget, async () => {
-      await callAppointmentRpc("marcar_nao_compareceu_staff", {
-        p_agendamento_id: appointment.id,
-        p_notes: notes?.trim() || "Cliente não compareceu."
-      });
-      return "Ausência registrada com sucesso.";
-    });
+  actions.appendChild(createActionButton("Não compareceu", "action-no-show", () => {
+    openNoShowModal(appointment);
   }));
 
   card.appendChild(actions);
@@ -441,7 +531,74 @@ async function loadCatalogs() {
   activeProfessionals = professionalsResult.data || [];
   activeServices = servicesResult.data || [];
   fillSelect("#profissional", activeProfessionals, ["nome", "name"]);
-  fillSelect("#servico", activeServices, ["nome", "name"]);
+}
+
+function setServiceSelectPlaceholder(text, disabled = true) {
+  const select = document.querySelector("#servico");
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = text;
+  select.replaceChildren(option);
+  select.disabled = disabled;
+}
+
+function resetAvailableTimes(message = "") {
+  clearAvailableTimes();
+  if (message) {
+    const hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = message;
+    document.querySelector("#available-times").appendChild(hint);
+  }
+}
+
+async function loadServicesForProfessional() {
+  const professionalId = document.querySelector("#profissional").value;
+  const requestId = ++servicesRequestId;
+  showAppointmentMessage("");
+  resetAvailableTimes(professionalId
+    ? "Selecione um serviço para buscar horários."
+    : "Selecione uma profissional primeiro.");
+
+  if (!professionalId) {
+    setServiceSelectPlaceholder("Selecione uma profissional primeiro");
+    return;
+  }
+
+  setServiceSelectPlaceholder("Carregando serviços...");
+  try {
+    const { data: links, error } = await supabaseClient
+      .from("profissional_servicos")
+      .select("servico_id")
+      .eq("profissional_id", professionalId)
+      .eq("active", true);
+    if (error) throw error;
+    if (requestId !== servicesRequestId) return;
+
+    const serviceIds = new Set((links || []).map((item) => item.servico_id).filter(Boolean));
+    const services = activeServices.filter((service) => serviceIds.has(service.id));
+    if (!services.length) {
+      setServiceSelectPlaceholder("Nenhum serviço disponível");
+      showAppointmentMessage("Esta profissional não possui serviços ativos vinculados.", "info");
+      return;
+    }
+
+    const select = document.querySelector("#servico");
+    setServiceSelectPlaceholder("Selecione", false);
+    services.forEach((service) => {
+      const option = document.createElement("option");
+      option.value = service.id;
+      const name = service.nome || service.name || "Sem nome";
+      const category = service.categoria || service.category;
+      option.textContent = category ? `${name} · ${category}` : name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    if (requestId !== servicesRequestId) return;
+    console.error("Erro ao carregar serviços da profissional:", error);
+    setServiceSelectPlaceholder("Não foi possível carregar os serviços");
+    showAppointmentMessage(readableError(error, "Não foi possível carregar os serviços desta profissional."));
+  }
 }
 
 function normalizeTime(item) {
@@ -775,6 +932,10 @@ document.querySelector("#logout-button").addEventListener("click", () => signOut
 document.querySelector("#agenda-form").addEventListener("submit", loadAgenda);
 document.querySelector("#search-times-button").addEventListener("click", searchAvailableTimes);
 document.querySelector("#appointment-form").addEventListener("submit", createAppointment);
+document.querySelector("#profissional").addEventListener("change", loadServicesForProfessional);
+document.querySelector("#servico").addEventListener("change", () => {
+  resetAvailableTimes("Clique em Buscar horários para ver a disponibilidade.");
+});
 document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);
@@ -784,5 +945,14 @@ completionModal.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !completionModal.hidden) closeCompletionModal();
+});
+appointmentActionForm.addEventListener("submit", submitAppointmentActionModal);
+backAppointmentActionButton.addEventListener("click", closeAppointmentActionModal);
+closeAppointmentActionButton.addEventListener("click", closeAppointmentActionModal);
+appointmentActionModal.addEventListener("click", (event) => {
+  if (event.target === appointmentActionModal) closeAppointmentActionModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !appointmentActionModal.hidden) closeAppointmentActionModal();
 });
 initializeAdmin();
