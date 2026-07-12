@@ -30,7 +30,7 @@ function addDetail(container, label, value) {
 function renderAgenda(items) {
   const list = document.querySelector("#agenda-list");
   list.replaceChildren();
-  if (!items?.length) {
+  if (!Array.isArray(items) || items.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
     empty.textContent = "Nenhum agendamento encontrado neste período.";
@@ -70,14 +70,18 @@ async function loadAgenda(event) {
   setBusy(button, true, "Carregando...");
   showMessage(adminMessage, "");
   try {
+    const dataInicio = document.querySelector("#data-inicio").value;
+    const dataFim = document.querySelector("#data-fim").value;
     const { data, error } = await supabaseClient.rpc("listar_agenda_staff", {
-      p_data_inicio: document.querySelector("#data-inicio").value,
-      p_data_fim: document.querySelector("#data-fim").value,
+      p_data_inicio: dataInicio,
+      p_data_fim: dataFim,
       p_profissional_id: null,
       p_statuses: null
     });
+    console.log("listar_agenda_staff result", data, error);
     if (error) throw error;
-    renderAgenda(data);
+    const items = data?.items || [];
+    renderAgenda(items);
   } catch (error) {
     renderAgenda([]);
     showMessage(adminMessage, readableError(error, "Não foi possível carregar a agenda."));
