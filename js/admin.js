@@ -32,6 +32,7 @@ let servicesRequestId = 0;
 let commissionBeingAdjusted = null;
 let commissionAdjustSaving = false;
 let allowedSections = new Set(["agenda", "new-appointment"]);
+let toastTimeout;
 
 const SECTION_TITLES = {
   agenda: "Agenda",
@@ -39,6 +40,22 @@ const SECTION_TITLES = {
   finance: "Resumo financeiro / Caixa",
   commissions: "Comissões"
 };
+
+function hideToast() {
+  window.clearTimeout(toastTimeout);
+  document.querySelector("#app-toast").hidden = true;
+}
+
+function showToast(message, type = "success") {
+  const toast = document.querySelector("#app-toast");
+  window.clearTimeout(toastTimeout);
+  document.querySelector("#app-toast-message").textContent = message;
+  toast.className = `app-toast app-toast-${type}`;
+  toast.setAttribute("role", type === "error" ? "alert" : "status");
+  toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+  toast.hidden = false;
+  toastTimeout = window.setTimeout(hideToast, type === "error" ? 7000 : 5000);
+}
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -175,10 +192,10 @@ async function runAppointmentAction(button, callback) {
   try {
     const successMessage = await callback();
     await loadAgenda();
-    showMessage(agendaActionMessage, successMessage, "success");
+    showToast(successMessage, "success");
   } catch (error) {
     console.error("Erro ao executar ação no agendamento:", error);
-    showMessage(agendaActionMessage, readableError(error, "Não foi possível concluir a ação."));
+    showToast(readableError(error, "Não foi possível concluir a ação."), "error");
   } finally {
     if (card.isConnected) {
       cardButtons.forEach((item) => { item.disabled = false; });
@@ -371,7 +388,7 @@ async function handleCompletionSubmit(event) {
     completionSaving = false;
     closeCompletionModal();
     await loadAgenda();
-    showMessage(agendaActionMessage, "Atendimento concluído com sucesso!", "success");
+    showToast("Atendimento concluído com sucesso!", "success");
   } catch (error) {
     console.error("Erro ao concluir atendimento:", error);
     showMessage(completionMessage, readableError(error, "Não foi possível concluir o atendimento."));
@@ -463,8 +480,7 @@ async function submitAppointmentActionModal(event) {
     appointmentActionSaving = false;
     closeAppointmentActionModal();
     await loadAgenda();
-    showMessage(
-      agendaActionMessage,
+    showToast(
       isCancel ? "Agendamento cancelado com sucesso!" : "Agendamento marcado como não compareceu.",
       "success"
     );
@@ -581,7 +597,7 @@ async function loadAgenda(event) {
   } catch (error) {
     console.error("Erro ao carregar a agenda:", error);
     renderAgenda([]);
-    showMessage(adminMessage, readableError(error, "Não foi possível carregar a agenda."));
+    showToast(readableError(error, "Não foi possível carregar a agenda."), "error");
   } finally {
     setBusy(button, false, "");
   }
@@ -750,7 +766,7 @@ async function searchAvailableTimes() {
     renderTimes(data);
   } catch (error) {
     renderTimes([]);
-    showAppointmentMessage(readableError(error, "Não foi possível buscar os horários."));
+    showToast(readableError(error, "Não foi possível buscar os horários."), "error");
   } finally {
     setBusy(button, false, "");
   }
@@ -792,14 +808,14 @@ async function createAppointment(event) {
       throw new Error(result.message || result.error || "Não foi possível criar o agendamento.");
     }
 
-    showAppointmentMessage("Agendamento criado com sucesso!", "success", true);
+    showToast("Agendamento criado com sucesso!", "success");
     document.querySelector("#cliente-nome").value = "";
     document.querySelector("#cliente-phone").value = "";
     document.querySelector("#cliente-email").value = "";
     clearAvailableTimes();
     await loadAgenda();
   } catch (error) {
-    showAppointmentMessage(readableError(error, "Não foi possível criar o agendamento."));
+    showToast(readableError(error, "Não foi possível criar o agendamento."), "error");
   } finally {
     setBusy(button, false, "");
     button.disabled = !document.querySelector("#selected-time").value;
@@ -887,6 +903,28 @@ function mergeProfessionalsWithCommissionSummary(porProfissional, selectedProfes
   });
 }
 
+function createMobileDataList(columns, rows) {
+  const list = document.createElement("div");
+  list.className = "mobile-list data-mobile-list";
+  rows.forEach((row) => {
+    const card = document.createElement("article");
+    card.className = "mobile-data-card";
+    columns.forEach((column) => {
+      const field = document.createElement("div");
+      const label = document.createElement("span");
+      const value = document.createElement("strong");
+      const rawValue = typeof column.value === "function" ? column.value(row) : row[column.value];
+      label.textContent = column.label;
+      value.textContent = column.currency ? formatCurrency(rawValue) : displayValue(rawValue);
+      if (column.currency) value.className = "finance-money";
+      field.append(label, value);
+      card.appendChild(field);
+    });
+    list.appendChild(card);
+  });
+  return list;
+}
+
 function createFinanceTable(title, columns, rows) {
   const section = document.createElement("section");
   section.className = "finance-table-section";
@@ -903,7 +941,7 @@ function createFinanceTable(title, columns, rows) {
   }
 
   const wrapper = document.createElement("div");
-  wrapper.className = "finance-table-wrapper";
+  wrapper.className = "finance-table-wrapper table-scroll desktop-table";
   const table = document.createElement("table");
   table.className = "finance-table";
   const head = document.createElement("thead");
@@ -930,7 +968,7 @@ function createFinanceTable(title, columns, rows) {
   });
   table.append(head, body);
   wrapper.appendChild(table);
-  section.appendChild(wrapper);
+  section.append(wrapper, createMobileDataList(columns, rows));
   return section;
 }
 
@@ -1013,7 +1051,7 @@ async function loadFinancialSummary(event) {
   } catch (error) {
     console.error("Erro ao carregar resumo financeiro:", error);
     document.querySelector("#finance-content").replaceChildren();
-    showMessage(message, readableError(error, "Não foi possível carregar o resumo financeiro."));
+    showToast(readableError(error, "Não foi possível carregar o resumo financeiro."), "error");
   } finally {
     setBusy(button, false, "");
   }
@@ -1110,7 +1148,7 @@ async function submitCommissionAdjust(event) {
     commissionAdjustSaving = false;
     closeCommissionAdjustModal();
     await loadCommissions();
-    showMessage(document.querySelector("#commissions-message"), "Comissão ajustada com sucesso!", "success");
+    showToast("Comissão ajustada com sucesso!", "success");
   } catch (error) {
     console.error("Erro ao ajustar comissão:", error);
     showMessage(commissionAdjustMessage, readableError(error, "Não foi possível ajustar a comissão."));
@@ -1127,7 +1165,7 @@ async function markCommissionPaid(button, commission) {
   if (currentUserRole !== "admin") return;
   if (!window.confirm("Marcar esta comissão como paga?")) return;
 
-  const rowButtons = [...button.closest("tr").querySelectorAll("button")];
+  const rowButtons = [...button.closest(".commission-row-actions").querySelectorAll("button")];
   const originalText = button.textContent;
   rowButtons.forEach((item) => { item.disabled = true; });
   button.textContent = "Salvando...";
@@ -1138,13 +1176,10 @@ async function markCommissionPaid(button, commission) {
       p_notes: "Comissão marcada como paga pelo painel administrativo."
     });
     await loadCommissions();
-    showMessage(document.querySelector("#commissions-message"), "Comissão marcada como paga!", "success");
+    showToast("Comissão marcada como paga!", "success");
   } catch (error) {
     console.error("Erro ao marcar comissão como paga:", error);
-    showMessage(
-      document.querySelector("#commissions-message"),
-      readableError(error, "Não foi possível marcar a comissão como paga.")
-    );
+    showToast(readableError(error, "Não foi possível marcar a comissão como paga."), "error");
     if (button.isConnected) {
       rowButtons.forEach((item) => { item.disabled = false; });
       button.textContent = originalText;
@@ -1173,6 +1208,36 @@ function createCommissionActions(commission) {
     container.appendChild(state);
   }
   return container;
+}
+
+function createCommissionMobileList(items) {
+  const list = document.createElement("div");
+  list.className = "mobile-list data-mobile-list";
+  items.forEach((commission) => {
+    const card = document.createElement("article");
+    card.className = "mobile-data-card commission-mobile-card";
+    [
+      ["Data", `${displayValue(commission.dataBr)} ${displayValue(commission.horaInicio)}`],
+      ["Cliente", commission.clienteNome],
+      ["Profissional", commission.profissionalNome],
+      ["Serviço", commission.servicoNome],
+      ["Comissão", formatCurrency(commission.valorComissao)],
+      ["Status", commission.status]
+    ].forEach(([fieldLabel, fieldValue]) => {
+      const field = document.createElement("div");
+      const label = document.createElement("span");
+      const value = document.createElement("strong");
+      label.textContent = fieldLabel;
+      value.textContent = displayValue(fieldValue);
+      field.append(label, value);
+      card.appendChild(field);
+    });
+    const actions = createCommissionActions(commission);
+    actions.classList.add("mobile-card-actions");
+    card.appendChild(actions);
+    list.appendChild(card);
+  });
+  return list;
 }
 
 function renderCommissionItems(items) {
@@ -1205,7 +1270,7 @@ function renderCommissionItems(items) {
     ["Observações", (item) => item.notes]
   ];
   const wrapper = document.createElement("div");
-  wrapper.className = "finance-table-wrapper";
+  wrapper.className = "finance-table-wrapper table-scroll desktop-table";
   const table = document.createElement("table");
   table.className = "finance-table commission-table";
   const head = document.createElement("thead");
@@ -1234,7 +1299,7 @@ function renderCommissionItems(items) {
   });
   table.append(head, body);
   wrapper.appendChild(table);
-  section.appendChild(wrapper);
+  section.append(wrapper, createCommissionMobileList(items));
   return section;
 }
 
@@ -1283,7 +1348,7 @@ async function loadCommissions(event) {
   } catch (error) {
     console.error("Erro ao carregar comissões:", error);
     document.querySelector("#commissions-content").replaceChildren();
-    showMessage(message, readableError(error, "Não foi possível carregar as comissões."));
+    showToast(readableError(error, "Não foi possível carregar as comissões."), "error");
     return false;
   } finally {
     setBusy(button, false, "");
@@ -1317,10 +1382,10 @@ async function generateCommissions() {
     const text = `Concluídos analisados: ${numberValue(result?.totalAgendamentosConcluidos)}. `
       + `Comissões geradas: ${numberValue(result?.comissoesGeradas)}. `
       + `Erros: ${numberValue(result?.erros)}.${errorDetails}`;
-    showMessage(message, text, numberValue(result?.erros) > 0 ? "info" : "success");
+    showToast(text, numberValue(result?.erros) > 0 ? "info" : "success");
   } catch (error) {
     console.error("Erro ao gerar comissões:", error);
-    showMessage(message, readableError(error, "Não foi possível gerar as comissões."));
+    showToast(readableError(error, "Não foi possível gerar as comissões."), "error");
   } finally {
     setBusy(button, false, "");
   }
@@ -1362,7 +1427,7 @@ async function initializeAdmin() {
       await loadCommissions();
     }
   } catch (error) {
-    showMessage(adminMessage, readableError(error, "Não foi possível iniciar o painel."));
+    showToast(readableError(error, "Não foi possível iniciar o painel."), "error");
   }
 }
 
@@ -1404,5 +1469,6 @@ commissionAdjustModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();
 });
+document.querySelector("#app-toast-close").addEventListener("click", hideToast);
 setupSidebarNavigation();
 initializeAdmin();
