@@ -31,6 +31,14 @@ let appointmentActionSaving = false;
 let servicesRequestId = 0;
 let commissionBeingAdjusted = null;
 let commissionAdjustSaving = false;
+let allowedSections = new Set(["agenda", "new-appointment"]);
+
+const SECTION_TITLES = {
+  agenda: "Agenda",
+  "new-appointment": "Novo agendamento",
+  finance: "Resumo financeiro / Caixa",
+  commissions: "Comissões"
+};
 
 const ACTIONABLE_STATUSES = new Set([
   "solicitado", "aguardando_sinal", "confirmado", "reagendamento_solicitado"
@@ -47,6 +55,66 @@ function showAppointmentMessage(text, type = "error", autoHide = false) {
       showMessage(appointmentMessage, "");
     }, 5000);
   }
+}
+
+function updatePageTitle(sectionName) {
+  document.querySelector("#page-title").textContent = SECTION_TITLES[sectionName] || "Painel administrativo";
+}
+
+function closeSidebar() {
+  document.body.classList.remove("sidebar-open");
+  document.querySelector("#sidebar-toggle").setAttribute("aria-expanded", "false");
+}
+
+function showSection(sectionName) {
+  const safeSection = allowedSections.has(sectionName) ? sectionName : "agenda";
+  document.querySelectorAll(".app-section").forEach((section) => {
+    const active = section.id === `section-${safeSection}`;
+    section.classList.toggle("is-active", active);
+    section.setAttribute("aria-hidden", String(!active));
+  });
+  document.querySelectorAll(".sidebar-link").forEach((button) => {
+    const active = button.dataset.section === safeSection;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+  updatePageTitle(safeSection);
+  try {
+    window.localStorage.setItem("adminCurrentSection", safeSection);
+  } catch (error) {
+    console.warn("Não foi possível salvar a seção atual:", error);
+  }
+  closeSidebar();
+}
+
+function applyRoleBasedNavigation(profile) {
+  const isAdmin = profile?.role === "admin";
+  allowedSections = new Set(isAdmin
+    ? ["agenda", "new-appointment", "finance", "commissions"]
+    : ["agenda", "new-appointment"]);
+  document.querySelectorAll(".admin-only-navigation").forEach((item) => {
+    item.hidden = !isAdmin;
+  });
+
+  let savedSection = "agenda";
+  try {
+    savedSection = window.localStorage.getItem("adminCurrentSection") || "agenda";
+  } catch (error) {
+    console.warn("Não foi possível recuperar a seção anterior:", error);
+  }
+  showSection(savedSection);
+}
+
+function setupSidebarNavigation() {
+  document.querySelectorAll(".sidebar-link").forEach((button) => {
+    button.addEventListener("click", () => showSection(button.dataset.section));
+  });
+  document.querySelector("#sidebar-toggle").addEventListener("click", () => {
+    const opening = !document.body.classList.contains("sidebar-open");
+    document.body.classList.toggle("sidebar-open", opening);
+    document.querySelector("#sidebar-toggle").setAttribute("aria-expanded", String(opening));
+  });
+  document.querySelector("#sidebar-backdrop").addEventListener("click", closeSidebar);
 }
 
 function setBusy(button, busy, busyText) {
@@ -1217,6 +1285,7 @@ async function initializeAdmin() {
     const access = await requireAdminAccess();
     if (!access) return;
     currentUserRole = access.profile.role;
+    applyRoleBasedNavigation(access.profile);
     const displayName = access.profile.nome || access.profile.name || access.profile.full_name;
     document.querySelector("#logged-user").textContent = displayName
       ? `${displayName} · ${access.session.user.email}`
@@ -1229,10 +1298,8 @@ async function initializeAdmin() {
     await loadCatalogs();
     await loadAgenda();
     if (currentUserRole === "admin") {
-      document.querySelector("#finance-section").hidden = false;
       setupFinanceFilters(today);
       await loadFinancialSummary();
-      document.querySelector("#commissions-section").hidden = false;
       setupCommissionFilters(today);
       await loadCommissions();
     }
@@ -1279,4 +1346,5 @@ commissionAdjustModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();
 });
+setupSidebarNavigation();
 initializeAdmin();

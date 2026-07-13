@@ -6,22 +6,37 @@
   <title>Painel administrativo | Nail Dreams</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-  <header class="topbar">
-    <div>
-      <strong>Nail Dreams</strong>
-      <span>Painel administrativo</span>
+<body class="admin-page">
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+  <aside id="admin-sidebar" class="app-sidebar" aria-label="Navegação principal">
+    <div class="sidebar-brand">
+      <span class="brand-mark">ND</span>
+      <div><strong>Nail Dreams</strong><span>Painel administrativo</span></div>
     </div>
-    <div class="user-area">
-      <span id="logged-user">Carregando usuário...</span>
-      <button id="logout-button" class="button-secondary" type="button">Sair</button>
-    </div>
-  </header>
+    <nav class="sidebar-nav">
+      <button class="sidebar-link is-active" type="button" data-section="agenda"><span>📅</span> Agenda</button>
+      <button class="sidebar-link" type="button" data-section="new-appointment"><span>＋</span> Novo agendamento</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="finance" hidden><span>💳</span> Caixa</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="commissions" hidden><span>％</span> Comissões</button>
+    </nav>
+  </aside>
 
-  <main class="container">
+  <div class="app-shell">
+    <header class="app-topbar">
+      <div class="page-title-area">
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+        <h1 id="page-title">Agenda</h1>
+      </div>
+      <div class="user-area">
+        <span id="logged-user">Carregando usuário...</span>
+        <button id="logout-button" class="button-secondary" type="button">Sair</button>
+      </div>
+    </header>
+
+  <main class="app-content">
     <p id="admin-message" class="message" role="alert" aria-live="polite"></p>
 
-    <section class="panel">
+    <section id="section-agenda" class="panel app-section is-active">
       <div class="section-heading">
         <div>
           <h1>Agenda do período</h1>
@@ -37,7 +52,7 @@
       <div id="agenda-list" class="agenda-grid"></div>
     </section>
 
-    <section id="finance-section" class="panel finance-section" hidden>
+    <section id="section-finance" class="panel app-section finance-section">
       <div class="section-heading">
         <div>
           <h2>Resumo financeiro / Caixa</h2>
@@ -56,7 +71,7 @@
       <div id="finance-content"></div>
     </section>
 
-    <section id="commissions-section" class="panel commissions-section" hidden>
+    <section id="section-commissions" class="panel app-section commissions-section">
       <div class="section-heading">
         <div>
           <h2>Comissões</h2>
@@ -87,7 +102,7 @@
       <div id="commissions-content"></div>
     </section>
 
-    <section class="panel">
+    <section id="section-new-appointment" class="panel app-section">
       <div class="section-heading">
         <div>
           <h2>Novo agendamento</h2>
@@ -113,6 +128,7 @@
       </form>
     </section>
   </main>
+  </div>
 
   <div id="completion-modal" class="modal-overlay" hidden>
     <section class="completion-modal" role="dialog" aria-modal="true" aria-labelledby="completion-modal-title">
