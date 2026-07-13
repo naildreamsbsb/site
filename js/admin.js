@@ -839,6 +839,54 @@ function renderFinanceCards(resumo = {}) {
   document.querySelector("#finance-content").appendChild(grid);
 }
 
+function normalizeProfessionalName(value) {
+  return String(value || "").trim().toLocaleLowerCase("pt-BR");
+}
+
+function mergeActiveProfessionals(summaryRows, selectedProfessionalId, zeroValues) {
+  const rows = Array.isArray(summaryRows) ? summaryRows : [];
+  const professionals = selectedProfessionalId
+    ? activeProfessionals.filter((item) => String(item.id) === String(selectedProfessionalId))
+    : activeProfessionals;
+
+  return professionals.map((professional) => {
+    const professionalName = professional.nome || professional.name || "Sem nome";
+    const existing = rows.find((row) => {
+      const rowId = row.profissionalId ?? row.profissional_id ?? row.id;
+      return (rowId && String(rowId) === String(professional.id))
+        || normalizeProfessionalName(row.profissionalNome) === normalizeProfessionalName(professionalName);
+    });
+    return {
+      ...zeroValues,
+      ...(existing || {}),
+      profissionalId: professional.id,
+      profissionalNome: professionalName
+    };
+  });
+}
+
+function mergeProfessionalsWithFinanceSummary(porProfissional, selectedProfessionalId) {
+  return mergeActiveProfessionals(porProfissional, selectedProfessionalId, {
+    totalAgendamentos: 0,
+    totalConcluidos: 0,
+    totalNaoCompareceu: 0,
+    totalCancelados: 0,
+    receitaBrutaConcluida: 0,
+    totalRecebido: 0
+  });
+}
+
+function mergeProfessionalsWithCommissionSummary(porProfissional, selectedProfessionalId) {
+  return mergeActiveProfessionals(porProfissional, selectedProfessionalId, {
+    quantidade: 0,
+    totalServicos: 0,
+    totalRecebido: 0,
+    totalComissao: 0,
+    totalPendente: 0,
+    totalPago: 0
+  });
+}
+
 function createFinanceTable(title, columns, rows) {
   const section = document.createElement("section");
   section.className = "finance-table-section";
@@ -888,6 +936,11 @@ function createFinanceTable(title, columns, rows) {
 
 function renderFinanceTables(data) {
   const content = document.querySelector("#finance-content");
+  const selectedProfessionalId = document.querySelector("#finance-professional").value || null;
+  const professionalsSummary = mergeProfessionalsWithFinanceSummary(
+    data.porProfissional,
+    selectedProfessionalId
+  );
   content.appendChild(createFinanceTable("Por forma de pagamento", [
     { label: "Forma", value: "formaPagamento" },
     { label: "Quantidade", value: "quantidade" },
@@ -900,7 +953,7 @@ function renderFinanceTables(data) {
     { label: "Concluídos", value: "totalConcluidos" },
     { label: "Receita", value: "receitaBrutaConcluida", currency: true },
     { label: "Recebido", value: "totalRecebido", currency: true }
-  ], data.porProfissional));
+  ], professionalsSummary));
 
   content.appendChild(createFinanceTable("Por serviço", [
     { label: "Serviço", value: "servicoNome" },
@@ -1189,6 +1242,11 @@ function renderCommissions(data) {
   const content = document.querySelector("#commissions-content");
   content.replaceChildren();
   renderCommissionCards(data.resumo || {});
+  const selectedProfessionalId = document.querySelector("#commissions-professional").value || null;
+  const professionalsSummary = mergeProfessionalsWithCommissionSummary(
+    data.porProfissional,
+    selectedProfessionalId
+  );
   content.appendChild(createFinanceTable("Por profissional", [
     { label: "Profissional", value: "profissionalNome" },
     { label: "Quantidade", value: "quantidade" },
@@ -1197,7 +1255,7 @@ function renderCommissions(data) {
     { label: "Comissão", value: "totalComissao", currency: true },
     { label: "Pendente", value: "totalPendente", currency: true },
     { label: "Pago", value: "totalPago", currency: true }
-  ], data.porProfissional));
+  ], professionalsSummary));
   content.appendChild(renderCommissionItems(data.items));
 }
 

@@ -14,6 +14,7 @@
 }
 
 * { box-sizing: border-box; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 body { margin: 0; min-height: 100vh; background: var(--background); }
 button, input, select, textarea { font: inherit; }
 button { border: 0; border-radius: 9px; padding: .72rem 1.05rem; color: #fff; background: var(--primary); cursor: pointer; font-weight: 650; }
@@ -52,13 +53,13 @@ h1, h2, h3, p { margin-top: 0; }
 .sidebar-link.is-active { color: #fff; background: var(--primary); box-shadow: 0 6px 16px rgba(169, 79, 114, .18); }
 .sidebar-link[hidden] { display: none; }
 .sidebar-link span { width: 1.25rem; text-align: center; }
-.app-shell { min-height: 100vh; margin-left: 250px; }
+.app-shell { min-width: 0; max-width: 100%; min-height: 100vh; margin-left: 250px; }
 .app-topbar { position: sticky; z-index: 100; top: 0; display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem max(1.2rem, calc((100% - 1180px) / 2)); border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px); }
 .page-title-area { display: flex; align-items: center; gap: .8rem; }
 .page-title-area h1 { margin: 0; font-size: 1.35rem; }
 .sidebar-toggle { display: none; padding: .45rem .65rem; color: var(--primary); background: #f7e9ee; font-size: 1.15rem; }
-.app-content { width: min(1180px, calc(100% - 2.4rem)); margin: 1.4rem auto 3rem; }
-.app-section { display: none; }
+.app-content { width: min(1180px, calc(100% - 2.4rem)); min-width: 0; max-width: 100%; margin: 1.4rem auto 3rem; }
+.app-section { display: none; min-width: 0; max-width: 100%; }
 .app-section.is-active { display: block; }
 .sidebar-backdrop { display: none; }
 
@@ -69,10 +70,10 @@ h1, h2, h3, p { margin-top: 0; }
 .button-secondary { color: var(--primary); background: #f7e9ee; }
 .button-secondary:hover:not(:disabled) { color: #fff; }
 .container { width: min(1180px, calc(100% - 2rem)); margin: 1.5rem auto 3rem; }
-.panel { margin-bottom: 1.5rem; padding: 1.4rem; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
+.panel { min-width: 0; max-width: 100%; margin-bottom: 1.5rem; padding: 1.4rem; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
 .section-heading p { color: var(--muted); }
 .form-row { display: grid; grid-template-columns: repeat(2, minmax(160px, 230px)) auto; align-items: end; gap: 1rem; margin-bottom: 1.3rem; }
-.agenda-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.agenda-grid { display: grid; min-width: 0; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
 .appointment-card { padding: 1rem; border: 1px solid var(--border); border-radius: 12px; }
 .card-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .9rem; }
 .card-heading h3 { margin: 0; font-size: 1.05rem; }
@@ -131,17 +132,18 @@ h1, h2, h3, p { margin-top: 0; }
 .commission-state-paga { color: var(--success); }
 .commission-state-cancelada { color: var(--error); }
 .commission-notes { max-width: 240px; white-space: normal; }
-.finance-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin-bottom: 1.5rem; }
-.finance-card { display: flex; min-height: 90px; flex-direction: column; justify-content: space-between; gap: .7rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: #fffafb; }
+.finance-card-grid { display: grid; min-width: 0; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin-bottom: 1.5rem; }
+.finance-card { display: flex; min-width: 0; min-height: 90px; flex-direction: column; justify-content: space-between; gap: .7rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: #fffafb; }
 .finance-card span { color: var(--muted); font-size: .8rem; font-weight: 650; }
-.finance-card strong { color: var(--text); font-size: 1.3rem; }
+.finance-card strong { overflow-wrap: anywhere; color: var(--text); font-size: 1.3rem; }
 .finance-card-value { border-color: #e5c5d1; background: #fcf3f6; }
 .finance-card-value strong, .finance-money { color: var(--primary-dark); font-weight: 750; }
 .finance-empty-state { margin-bottom: 1rem; padding: 1rem; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); text-align: center; }
-.finance-table-section { margin-top: 1.4rem; }
+.finance-table-section { min-width: 0; max-width: 100%; margin-top: 1.4rem; }
 .finance-table-section h3 { margin-bottom: .7rem; font-size: 1rem; }
-.finance-table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-.finance-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: .82rem; }
+.finance-table-wrapper { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.finance-table { width: 100%; min-width: 680px; border-collapse: collapse; white-space: nowrap; font-size: .82rem; }
+.commission-table { min-width: 1500px; }
 .finance-table th, .finance-table td { padding: .7rem .75rem; border-bottom: 1px solid var(--border); text-align: left; }
 .finance-table th { color: var(--muted); background: #faf6f7; font-size: .75rem; text-transform: uppercase; letter-spacing: .02em; }
 .finance-table tbody tr:last-child td { border-bottom: 0; }
@@ -169,12 +171,21 @@ h1, h2, h3, p { margin-top: 0; }
   .app-shell { margin-left: 0; }
   .app-topbar { align-items: center; padding: .8rem 1rem; }
   .sidebar-toggle { display: inline-flex; }
-  .app-content { width: min(100% - 1.4rem, 1180px); margin-top: .8rem; }
-  .page-title-area h1 { font-size: 1.05rem; }
+  .app-content { width: 100%; max-width: 100%; margin: .8rem 0 2rem; padding: 0 .65rem; }
+  .panel { padding: .9rem; border-radius: 12px; }
+  .page-title-area { min-width: 0; }
+  .page-title-area h1 { overflow: hidden; font-size: 1.05rem; text-overflow: ellipsis; white-space: nowrap; }
   .app-topbar .user-area span { display: none; }
   .topbar { align-items: flex-start; }
   .user-area { flex-direction: column; align-items: flex-end; text-align: right; }
   .form-row, .appointment-form, .finance-filters, .commissions-filters { grid-template-columns: 1fr; }
+  .finance-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-card { padding: .85rem; }
+  .finance-card strong { font-size: 1.05rem; }
+  .finance-table { min-width: 640px; }
+  .commission-table { min-width: 1450px; }
+  .modal-overlay { padding: .5rem; }
+  .completion-modal { width: 100%; max-width: 100%; max-height: calc(100vh - 1rem); padding: 1rem; }
   .completion-summary, .completion-fields, .action-summary { grid-template-columns: 1fr; }
   .modal-full-width { grid-column: auto; }
   .modal-actions { flex-direction: column-reverse; }
@@ -184,4 +195,10 @@ h1, h2, h3, p { margin-top: 0; }
   .finance-filters button { width: 100%; }
   .commissions-filter-actions { flex-direction: column; }
   .commissions-filter-actions button { width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .finance-card-grid { grid-template-columns: 1fr; }
+  .app-topbar { gap: .5rem; }
+  .app-topbar .button-secondary { padding: .55rem .7rem; }
 }
