@@ -19,6 +19,12 @@ const commissionAdjustMessage = document.querySelector("#commission-adjust-messa
 const confirmCommissionAdjustButton = document.querySelector("#confirm-commission-adjust");
 const cancelCommissionAdjustButton = document.querySelector("#cancel-commission-adjust");
 const closeCommissionAdjustButton = document.querySelector("#close-commission-adjust");
+const registrationModal = document.querySelector("#registration-modal");
+const registrationForm = document.querySelector("#registration-form");
+const registrationMessage = document.querySelector("#registration-message");
+const saveRegistrationButton = document.querySelector("#save-registration");
+const cancelRegistrationButton = document.querySelector("#cancel-registration");
+const closeRegistrationButton = document.querySelector("#close-registration-modal");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
@@ -33,10 +39,18 @@ let commissionBeingAdjusted = null;
 let commissionAdjustSaving = false;
 let allowedSections = new Set(["agenda", "new-appointment"]);
 let toastTimeout;
+let registrationState = null;
+let registrationSaving = false;
+let clientsCache = [];
+let professionalsCache = [];
+let servicesCache = [];
 
 const SECTION_TITLES = {
   agenda: "Agenda",
   "new-appointment": "Novo agendamento",
+  clients: "Clientes",
+  professionals: "Profissionais",
+  services: "Serviços",
   finance: "Resumo financeiro / Caixa",
   commissions: "Comissões"
 };
@@ -107,8 +121,8 @@ function showSection(sectionName) {
 function applyRoleBasedNavigation(profile) {
   const isAdmin = profile?.role === "admin";
   allowedSections = new Set(isAdmin
-    ? ["agenda", "new-appointment", "finance", "commissions"]
-    : ["agenda", "new-appointment"]);
+    ? ["agenda", "new-appointment", "clients", "professionals", "services", "finance", "commissions"]
+    : ["agenda", "new-appointment", "clients"]);
   document.querySelectorAll(".admin-only-navigation").forEach((item) => {
     item.hidden = !isAdmin;
   });
@@ -622,7 +636,30 @@ async function loadCatalogs() {
   if (servicesResult.error) throw servicesResult.error;
   activeProfessionals = professionalsResult.data || [];
   activeServices = servicesResult.data || [];
+  const professionalSelect = document.querySelector("#profissional");
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione";
+  professionalSelect.replaceChildren(placeholder);
   fillSelect("#profissional", activeProfessionals, ["nome", "name"]);
+  setServiceSelectPlaceholder("Selecione uma profissional primeiro");
+  resetAvailableTimes("Selecione uma profissional primeiro.");
+}
+
+function setupProfessionalFilter(selectId) {
+  const select = document.querySelector(selectId);
+  const selectedValue = select.value;
+  const all = document.createElement("option");
+  all.value = "";
+  all.textContent = "Todas";
+  select.replaceChildren(all);
+  activeProfessionals.forEach((professional) => {
+    const option = document.createElement("option");
+    option.value = professional.id;
+    option.textContent = professional.nome || professional.name || "Sem nome";
+    select.appendChild(option);
+  });
+  if ([...select.options].some((option) => option.value === selectedValue)) select.value = selectedValue;
 }
 
 function setServiceSelectPlaceholder(text, disabled = true) {
@@ -819,6 +856,413 @@ async function createAppointment(event) {
   } finally {
     setBusy(button, false, "");
     button.disabled = !document.querySelector("#selected-time").value;
+  }
+}
+
+function optionalValue(selector) {
+  const value = document.querySelector(selector).value.trim();
+  return value || null;
+}
+
+function friendlyBoolean(value) {
+  return value ? "Sim" : "Não";
+}
+
+function createManagementActions(item, type) {
+  const actions = document.createElement("div");
+  actions.className = "management-actions";
+  const edit = createActionButton("Editar", "management-edit-button", () => openRegistrationModal(type, item));
+  actions.appendChild(edit);
+  if (type === "professional" || type === "service") {
+    const active = Boolean(item.active);
+    const toggle = createActionButton(
+      active ? "Desativar" : "Ativar",
+      active ? "management-disable-button" : "management-enable-button",
+      () => toggleRegistrationActive(type, item)
+    );
+    actions.appendChild(toggle);
+  }
+  return actions;
+}
+
+function renderManagementList(containerId, items, columns, type) {
+  const container = document.querySelector(containerId);
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "finance-empty-state";
+    empty.textContent = "Nenhum registro encontrado.";
+    container.appendChild(empty);
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "finance-table-wrapper table-scroll desktop-table";
+  const table = document.createElement("table");
+  table.className = "finance-table management-table";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  [...columns.map((column) => column.label), "Ações"].forEach((label) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  head.appendChild(headRow);
+  const body = document.createElement("tbody");
+  items.forEach((item) => {
+    const row = document.createElement("tr");
+    columns.forEach((column) => {
+      const cell = document.createElement("td");
+      const value = typeof column.value === "function" ? column.value(item) : item[column.value];
+      cell.textContent = displayValue(value);
+      row.appendChild(cell);
+    });
+    const actionCell = document.createElement("td");
+    actionCell.appendChild(createManagementActions(item, type));
+    row.appendChild(actionCell);
+    body.appendChild(row);
+  });
+  table.append(head, body);
+  wrapper.appendChild(table);
+
+  const mobileList = document.createElement("div");
+  mobileList.className = "mobile-list data-mobile-list";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "mobile-data-card management-mobile-card";
+    columns.forEach((column) => {
+      const value = typeof column.value === "function" ? column.value(item) : item[column.value];
+      card.appendChild(createCompactMobileField(column.label, value));
+    });
+    const actions = createManagementActions(item, type);
+    actions.classList.add("mobile-card-actions");
+    card.appendChild(actions);
+    mobileList.appendChild(card);
+  });
+  container.append(wrapper, mobileList);
+}
+
+async function loadClients(event) {
+  event?.preventDefault();
+  if (!currentUserRole) return;
+  const button = document.querySelector("#search-clients-button");
+  const search = document.querySelector("#clients-search").value.trim().replace(/[,()]/g, " ");
+  setBusy(button, true, "Buscando...");
+  try {
+    let query = supabaseClient.from("clientes").select("*").order("full_name");
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    clientsCache = data || [];
+    renderManagementList("#clients-content", clientsCache, [
+      { label: "Nome", value: "full_name" },
+      { label: "Telefone", value: "phone" },
+      { label: "E-mail", value: "email" },
+      { label: "Nascimento", value: "birth_date" },
+      { label: "Cliente da casa", value: (item) => friendlyBoolean(item.is_house_client) },
+      { label: "Exige sinal", value: (item) => friendlyBoolean(item.requires_deposit_default) },
+      { label: "% sinal", value: (item) => item.deposit_percent_default ?? 0 },
+      { label: "Observações", value: "notes" }
+    ], "client");
+  } catch (error) {
+    console.error("Erro ao carregar clientes:", error);
+    showToast(readableError(error, "Não foi possível carregar os clientes."), "error");
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+async function loadProfessionalsManagement() {
+  if (currentUserRole !== "admin") return;
+  try {
+    const { data, error } = await supabaseClient.from("profissionais").select("*").order("name");
+    if (error) throw error;
+    professionalsCache = data || [];
+    renderManagementList("#professionals-content", professionalsCache, [
+      { label: "Nome", value: (item) => item.name || item.nome },
+      { label: "Telefone", value: "phone" },
+      { label: "E-mail", value: "email" },
+      { label: "Especialidade", value: "specialty" },
+      { label: "Ativo", value: (item) => friendlyBoolean(item.active) },
+      { label: "Cor", value: "color" },
+      { label: "Observações", value: "notes" }
+    ], "professional");
+  } catch (error) {
+    console.error("Erro ao carregar profissionais:", error);
+    showToast(readableError(error, "Não foi possível carregar os profissionais."), "error");
+  }
+}
+
+async function loadServicesManagement() {
+  if (currentUserRole !== "admin") return;
+  try {
+    const { data, error } = await supabaseClient.from("servicos").select("*").order("name");
+    if (error) throw error;
+    servicesCache = data || [];
+    renderManagementList("#services-content", servicesCache, [
+      { label: "Serviço", value: (item) => item.name || item.nome },
+      { label: "Categoria", value: (item) => item.category || item.categoria },
+      { label: "Descrição", value: "description" },
+      { label: "Duração", value: (item) => `${item.duration_minutes ?? 0} min` },
+      { label: "Preço", value: (item) => formatCurrency(item.price) },
+      { label: "Ativo", value: (item) => friendlyBoolean(item.active) },
+      { label: "Exige sinal", value: (item) => friendlyBoolean(item.requires_deposit_default) },
+      { label: "% sinal", value: (item) => item.deposit_percent_default ?? 0 }
+    ], "service");
+  } catch (error) {
+    console.error("Erro ao carregar serviços:", error);
+    showToast(readableError(error, "Não foi possível carregar os serviços."), "error");
+  }
+}
+
+function setRegistrationField(selector, value) {
+  document.querySelector(selector).value = value ?? "";
+}
+
+function renderProfessionalServiceCheckboxes(activeLinkIds = new Set()) {
+  const container = document.querySelector("#professional-services-checkboxes");
+  container.replaceChildren();
+  if (!activeServices.length) {
+    const empty = document.createElement("span");
+    empty.className = "muted";
+    empty.textContent = "Nenhum serviço ativo disponível.";
+    container.appendChild(empty);
+    return;
+  }
+  activeServices.forEach((service) => {
+    const label = document.createElement("label");
+    label.className = "checkbox-label service-checkbox";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = service.id;
+    input.checked = activeLinkIds.has(String(service.id));
+    label.append(input, document.createTextNode(service.name || service.nome || "Sem nome"));
+    container.appendChild(label);
+  });
+}
+
+async function openRegistrationModal(type, item = null) {
+  if ((type === "professional" || type === "service") && currentUserRole !== "admin") return;
+  registrationState = { type, item };
+  registrationForm.reset();
+  showMessage(registrationMessage, "");
+  document.querySelectorAll(".registration-fields").forEach((fields) => { fields.hidden = true; });
+  document.querySelector(`#${type}-registration-fields`).hidden = false;
+  const editing = Boolean(item);
+  const titles = { client: "cliente", professional: "profissional", service: "serviço" };
+  document.querySelector("#registration-modal-title").textContent = `${editing ? "Editar" : "Novo"} ${titles[type]}`;
+  document.querySelector("#registration-modal-intro").textContent = "Preencha os dados e confirme para salvar.";
+
+  if (type === "client") {
+    setRegistrationField("#registration-client-name", item?.full_name);
+    setRegistrationField("#registration-client-phone", item?.phone);
+    setRegistrationField("#registration-client-email", item?.email);
+    setRegistrationField("#registration-client-birth-date", item?.birth_date);
+    document.querySelector("#registration-client-house").checked = Boolean(item?.is_house_client);
+    document.querySelector("#registration-client-deposit").checked = Boolean(item?.requires_deposit_default);
+    setRegistrationField("#registration-client-deposit-percent", item?.deposit_percent_default ?? 0);
+    setRegistrationField("#registration-client-notes", item?.notes);
+  } else if (type === "professional") {
+    setRegistrationField("#registration-professional-name", item?.name || item?.nome);
+    setRegistrationField("#registration-professional-phone", item?.phone);
+    setRegistrationField("#registration-professional-email", item?.email);
+    setRegistrationField("#registration-professional-specialty", item?.specialty);
+    setRegistrationField("#registration-professional-color", item?.color || "#a94f72");
+    document.querySelector("#registration-professional-active").checked = item ? Boolean(item.active) : true;
+    setRegistrationField("#registration-professional-notes", item?.notes);
+    let activeLinkIds = new Set();
+    if (item?.id) {
+      const { data, error } = await supabaseClient
+        .from("profissional_servicos")
+        .select("servico_id, active")
+        .eq("profissional_id", item.id);
+      if (error) {
+        showToast(readableError(error, "Não foi possível carregar os vínculos."), "error");
+        return;
+      }
+      activeLinkIds = new Set((data || []).filter((link) => link.active).map((link) => String(link.servico_id)));
+    }
+    renderProfessionalServiceCheckboxes(activeLinkIds);
+  } else {
+    setRegistrationField("#registration-service-name", item?.name || item?.nome);
+    setRegistrationField("#registration-service-category", item?.category || item?.categoria);
+    setRegistrationField("#registration-service-duration", item?.duration_minutes);
+    setRegistrationField("#registration-service-price", item?.price ?? 0);
+    document.querySelector("#registration-service-active").checked = item ? Boolean(item.active) : true;
+    document.querySelector("#registration-service-deposit").checked = Boolean(item?.requires_deposit_default);
+    setRegistrationField("#registration-service-deposit-percent", item?.deposit_percent_default ?? 0);
+    setRegistrationField("#registration-service-description", item?.description);
+  }
+  registrationModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeRegistrationModal() {
+  if (registrationSaving) return;
+  registrationModal.hidden = true;
+  document.body.classList.remove("modal-open");
+  registrationState = null;
+  showMessage(registrationMessage, "");
+}
+
+async function syncProfessionalServices(professionalId) {
+  const selectedIds = new Set(
+    [...document.querySelectorAll("#professional-services-checkboxes input:checked")].map((input) => String(input.value))
+  );
+  const { data, error } = await supabaseClient
+    .from("profissional_servicos")
+    .select("id, servico_id, active")
+    .eq("profissional_id", professionalId);
+  if (error) throw error;
+  const existing = data || [];
+  const operations = activeServices.map((service) => {
+    const link = existing.find((item) => String(item.servico_id) === String(service.id));
+    const shouldBeActive = selectedIds.has(String(service.id));
+    if (link && Boolean(link.active) !== shouldBeActive) {
+      return supabaseClient.from("profissional_servicos").update({ active: shouldBeActive }).eq("id", link.id);
+    }
+    if (!link && shouldBeActive) {
+      return supabaseClient.from("profissional_servicos").insert({
+        profissional_id: professionalId,
+        servico_id: service.id,
+        active: true
+      });
+    }
+    return null;
+  }).filter(Boolean);
+  const results = await Promise.all(operations);
+  const operationError = results.find((result) => result.error)?.error;
+  if (operationError) throw operationError;
+}
+
+async function refreshActiveCatalogs() {
+  await loadCatalogs();
+  if (currentUserRole === "admin") {
+    setupProfessionalFilter("#finance-professional");
+    setupProfessionalFilter("#commissions-professional");
+  }
+}
+
+async function saveRegistration(event) {
+  event.preventDefault();
+  if (!registrationState || registrationSaving) return;
+  const { type, item } = registrationState;
+  if ((type === "professional" || type === "service") && currentUserRole !== "admin") return;
+  let payload;
+  if (type === "client") {
+    const name = document.querySelector("#registration-client-name").value.trim();
+    const percent = numberValue(document.querySelector("#registration-client-deposit-percent").value);
+    if (!name) return showMessage(registrationMessage, "Informe o nome da cliente.");
+    if (percent < 0 || percent > 100) return showMessage(registrationMessage, "O percentual deve ficar entre 0 e 100.");
+    payload = {
+      full_name: name,
+      phone: optionalValue("#registration-client-phone"),
+      email: optionalValue("#registration-client-email"),
+      birth_date: optionalValue("#registration-client-birth-date"),
+      is_house_client: document.querySelector("#registration-client-house").checked,
+      requires_deposit_default: document.querySelector("#registration-client-deposit").checked,
+      deposit_percent_default: percent,
+      notes: optionalValue("#registration-client-notes")
+    };
+  } else if (type === "professional") {
+    const name = document.querySelector("#registration-professional-name").value.trim();
+    if (!name) return showMessage(registrationMessage, "Informe o nome da profissional.");
+    payload = {
+      name,
+      phone: optionalValue("#registration-professional-phone"),
+      email: optionalValue("#registration-professional-email"),
+      specialty: optionalValue("#registration-professional-specialty"),
+      color: document.querySelector("#registration-professional-color").value,
+      active: document.querySelector("#registration-professional-active").checked,
+      notes: optionalValue("#registration-professional-notes")
+    };
+  } else {
+    const name = document.querySelector("#registration-service-name").value.trim();
+    const duration = Number(document.querySelector("#registration-service-duration").value);
+    const price = normalizeAmount(document.querySelector("#registration-service-price").value);
+    const percent = numberValue(document.querySelector("#registration-service-deposit-percent").value);
+    if (!name) return showMessage(registrationMessage, "Informe o nome do serviço.");
+    if (!Number.isFinite(duration) || duration <= 0) return showMessage(registrationMessage, "A duração deve ser maior que zero.");
+    if (!Number.isFinite(price) || price < 0) return showMessage(registrationMessage, "O preço não pode ser negativo.");
+    if (percent < 0 || percent > 100) return showMessage(registrationMessage, "O percentual deve ficar entre 0 e 100.");
+    payload = {
+      name,
+      category: optionalValue("#registration-service-category"),
+      description: optionalValue("#registration-service-description"),
+      duration_minutes: duration,
+      price,
+      active: document.querySelector("#registration-service-active").checked,
+      requires_deposit_default: document.querySelector("#registration-service-deposit").checked,
+      deposit_percent_default: percent
+    };
+  }
+
+  registrationSaving = true;
+  saveRegistrationButton.disabled = true;
+  cancelRegistrationButton.disabled = true;
+  closeRegistrationButton.disabled = true;
+  saveRegistrationButton.textContent = "Salvando...";
+  showMessage(registrationMessage, "");
+  try {
+    const table = type === "client" ? "clientes" : type === "professional" ? "profissionais" : "servicos";
+    let saved;
+    if (item?.id) {
+      const { error } = await supabaseClient.from(table).update(payload).eq("id", item.id);
+      if (error) throw error;
+      saved = { ...item, ...payload };
+    } else {
+      const { data, error } = await supabaseClient.from(table).insert(payload).select().single();
+      if (error) throw error;
+      saved = data;
+    }
+    registrationState.item = saved;
+    if (type === "professional") await syncProfessionalServices(saved.id);
+
+    registrationSaving = false;
+    closeRegistrationModal();
+    if (type === "client") await loadClients();
+    else {
+      await refreshActiveCatalogs();
+      if (type === "professional") await loadProfessionalsManagement();
+      else await loadServicesManagement();
+    }
+    showToast(
+      type === "professional"
+        ? "Profissional e vínculos salvos com sucesso!"
+        : `${type === "client" ? "Cliente" : "Serviço"} salvo com sucesso!`,
+      "success"
+    );
+  } catch (error) {
+    console.error("Erro ao salvar cadastro:", error);
+    const message = readableError(error, "Não foi possível salvar o cadastro.");
+    showMessage(registrationMessage, message);
+    showToast(message, "error");
+  } finally {
+    registrationSaving = false;
+    saveRegistrationButton.disabled = false;
+    cancelRegistrationButton.disabled = false;
+    closeRegistrationButton.disabled = false;
+    saveRegistrationButton.textContent = "Salvar";
+  }
+}
+
+async function toggleRegistrationActive(type, item) {
+  if (currentUserRole !== "admin") return;
+  const table = type === "professional" ? "profissionais" : "servicos";
+  const nextActive = !item.active;
+  try {
+    const { error } = await supabaseClient.from(table).update({ active: nextActive }).eq("id", item.id);
+    if (error) throw error;
+    await refreshActiveCatalogs();
+    if (type === "professional") await loadProfessionalsManagement();
+    else await loadServicesManagement();
+    showToast(`${type === "professional" ? "Profissional" : "Serviço"} ${nextActive ? "ativado" : "desativado"} com sucesso!`, "success");
+  } catch (error) {
+    console.error("Erro ao alterar status do cadastro:", error);
+    showToast(readableError(error, "Não foi possível alterar o status."), "error");
   }
 }
 
@@ -1107,13 +1551,7 @@ async function loadFinancialSummary(event) {
 function setupFinanceFilters(defaultDate) {
   document.querySelector("#finance-start-date").value = defaultDate;
   document.querySelector("#finance-end-date").value = defaultDate;
-  const select = document.querySelector("#finance-professional");
-  activeProfessionals.forEach((professional) => {
-    const option = document.createElement("option");
-    option.value = professional.id;
-    option.textContent = professional.nome || professional.name || "Sem nome";
-    select.appendChild(option);
-  });
+  setupProfessionalFilter("#finance-professional");
 }
 
 function getCommissionFilters() {
@@ -1448,13 +1886,7 @@ async function generateCommissions() {
 function setupCommissionFilters(defaultDate) {
   document.querySelector("#commissions-start-date").value = defaultDate;
   document.querySelector("#commissions-end-date").value = defaultDate;
-  const select = document.querySelector("#commissions-professional");
-  activeProfessionals.forEach((professional) => {
-    const option = document.createElement("option");
-    option.value = professional.id;
-    option.textContent = professional.nome || professional.name || "Sem nome";
-    select.appendChild(option);
-  });
+  setupProfessionalFilter("#commissions-professional");
 }
 
 async function initializeAdmin() {
@@ -1474,7 +1906,9 @@ async function initializeAdmin() {
     document.querySelector("#appointment-date").value = today;
     await loadCatalogs();
     await loadAgenda();
+    await loadClients();
     if (currentUserRole === "admin") {
+      await Promise.all([loadProfessionalsManagement(), loadServicesManagement()]);
       setupFinanceFilters(today);
       await loadFinancialSummary();
       setupCommissionFilters(today);
@@ -1496,6 +1930,10 @@ document.querySelector("#servico").addEventListener("change", () => {
 document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
 document.querySelector("#commissions-form").addEventListener("submit", loadCommissions);
 document.querySelector("#generate-commissions-button").addEventListener("click", generateCommissions);
+document.querySelector("#clients-search-form").addEventListener("submit", loadClients);
+document.querySelector("#new-client-button").addEventListener("click", () => openRegistrationModal("client"));
+document.querySelector("#new-professional-button").addEventListener("click", () => openRegistrationModal("professional"));
+document.querySelector("#new-service-button").addEventListener("click", () => openRegistrationModal("service"));
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);
 closeCompletionButton.addEventListener("click", closeCompletionModal);
@@ -1524,5 +1962,14 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();
 });
 document.querySelector("#app-toast-close").addEventListener("click", hideToast);
+registrationForm.addEventListener("submit", saveRegistration);
+cancelRegistrationButton.addEventListener("click", closeRegistrationModal);
+closeRegistrationButton.addEventListener("click", closeRegistrationModal);
+registrationModal.addEventListener("click", (event) => {
+  if (event.target === registrationModal) closeRegistrationModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !registrationModal.hidden) closeRegistrationModal();
+});
 setupSidebarNavigation();
 initializeAdmin();

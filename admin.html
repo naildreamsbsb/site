@@ -16,6 +16,9 @@
     <nav class="sidebar-nav">
       <button class="sidebar-link is-active" type="button" data-section="agenda"><span>📅</span> Agenda</button>
       <button class="sidebar-link" type="button" data-section="new-appointment"><span>＋</span> Novo agendamento</button>
+      <button class="sidebar-link" type="button" data-section="clients"><span>👤</span> Clientes</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="professionals" hidden><span>✦</span> Profissionais</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="services" hidden><span>♡</span> Serviços</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="finance" hidden><span>💳</span> Caixa</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="commissions" hidden><span>％</span> Comissões</button>
     </nav>
@@ -50,6 +53,34 @@
         <button id="load-agenda-button" type="submit">Carregar agenda</button>
       </form>
       <div id="agenda-list" class="agenda-grid"></div>
+    </section>
+
+    <section id="section-clients" class="panel app-section">
+      <div class="management-heading">
+        <div><h2>Clientes</h2><p>Consulte e mantenha os dados das clientes.</p></div>
+        <button id="new-client-button" type="button">Novo cliente</button>
+      </div>
+      <form id="clients-search-form" class="management-search">
+        <label>Buscar por nome, telefone ou e-mail<input id="clients-search" type="search" placeholder="Digite para buscar"></label>
+        <button id="search-clients-button" type="submit">Buscar clientes</button>
+      </form>
+      <div id="clients-content"></div>
+    </section>
+
+    <section id="section-professionals" class="panel app-section">
+      <div class="management-heading">
+        <div><h2>Profissionais</h2><p>Gerencie profissionais e os serviços realizados.</p></div>
+        <button id="new-professional-button" type="button">Nova profissional</button>
+      </div>
+      <div id="professionals-content"></div>
+    </section>
+
+    <section id="section-services" class="panel app-section">
+      <div class="management-heading">
+        <div><h2>Serviços</h2><p>Gerencie o catálogo, valores e regras de sinal.</p></div>
+        <button id="new-service-button" type="button">Novo serviço</button>
+      </div>
+      <div id="services-content"></div>
     </section>
 
     <section id="section-finance" class="panel app-section finance-section">
@@ -133,6 +164,59 @@
   <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
     <span id="app-toast-message"></span>
     <button id="app-toast-close" type="button" aria-label="Fechar mensagem">&times;</button>
+  </div>
+
+  <div id="registration-modal" class="modal-overlay" hidden>
+    <section class="completion-modal registration-modal" role="dialog" aria-modal="true" aria-labelledby="registration-modal-title">
+      <div class="modal-heading">
+        <div><h2 id="registration-modal-title"></h2><p id="registration-modal-intro"></p></div>
+        <button id="close-registration-modal" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+      <form id="registration-form">
+        <p id="registration-message" class="message" role="alert" aria-live="polite"></p>
+
+        <div id="client-registration-fields" class="registration-fields" hidden>
+          <label>Nome<input id="registration-client-name" type="text"></label>
+          <label>Telefone<input id="registration-client-phone" type="tel"></label>
+          <label>E-mail<input id="registration-client-email" type="email"></label>
+          <label>Data de nascimento<input id="registration-client-birth-date" type="date"></label>
+          <label class="checkbox-label"><input id="registration-client-house" type="checkbox"> Cliente da casa?</label>
+          <label class="checkbox-label"><input id="registration-client-deposit" type="checkbox"> Exige sinal padrão?</label>
+          <label>Percentual de sinal<input id="registration-client-deposit-percent" type="number" min="0" max="100" step="0.01"></label>
+          <label class="registration-full-width">Observações<textarea id="registration-client-notes" rows="3"></textarea></label>
+        </div>
+
+        <div id="professional-registration-fields" class="registration-fields" hidden>
+          <label>Nome<input id="registration-professional-name" type="text"></label>
+          <label>Telefone<input id="registration-professional-phone" type="tel"></label>
+          <label>E-mail<input id="registration-professional-email" type="email"></label>
+          <label>Especialidade<input id="registration-professional-specialty" type="text"></label>
+          <label>Cor<input id="registration-professional-color" type="color" value="#a94f72"></label>
+          <label class="checkbox-label"><input id="registration-professional-active" type="checkbox"> Ativo?</label>
+          <label class="registration-full-width">Observações<textarea id="registration-professional-notes" rows="3"></textarea></label>
+          <fieldset class="registration-full-width services-fieldset">
+            <legend>Serviços realizados</legend>
+            <div id="professional-services-checkboxes" class="services-checkbox-grid"></div>
+          </fieldset>
+        </div>
+
+        <div id="service-registration-fields" class="registration-fields" hidden>
+          <label>Nome do serviço<input id="registration-service-name" type="text"></label>
+          <label>Categoria<input id="registration-service-category" type="text"></label>
+          <label>Duração em minutos<input id="registration-service-duration" type="number" min="1" step="1"></label>
+          <label>Preço<input id="registration-service-price" type="text" inputmode="decimal"></label>
+          <label class="checkbox-label"><input id="registration-service-active" type="checkbox"> Ativo?</label>
+          <label class="checkbox-label"><input id="registration-service-deposit" type="checkbox"> Exige sinal?</label>
+          <label>Percentual de sinal<input id="registration-service-deposit-percent" type="number" min="0" max="100" step="0.01"></label>
+          <label class="registration-full-width">Descrição<textarea id="registration-service-description" rows="3"></textarea></label>
+        </div>
+
+        <div class="modal-actions">
+          <button id="cancel-registration" class="modal-secondary-button" type="button">Cancelar</button>
+          <button id="save-registration" type="submit">Salvar</button>
+        </div>
+      </form>
+    </section>
   </div>
 
   <div id="completion-modal" class="modal-overlay" hidden>
