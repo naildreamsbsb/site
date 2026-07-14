@@ -839,15 +839,15 @@ function renderFinanceCards(resumo = {}) {
   const totalCanceled = numberValue(resumo.totalCanceladoCliente)
     + numberValue(resumo.totalCanceladoStudio);
   const cards = [
+    ["Total recebido", resumo.totalRecebido, true],
+    ["Receita concluída", resumo.receitaBrutaConcluida, true],
+    ["Pendente", resumo.totalPendentePagamento, true],
+    ["Sinais pendentes", resumo.totalSinalPendente, true],
+    ["Ticket médio", resumo.ticketMedioConcluido, true],
     ["Agendamentos", resumo.totalAgendamentos],
     ["Concluídos", resumo.totalConcluidos],
     ["Não compareceu", resumo.totalNaoCompareceu],
-    ["Cancelados", totalCanceled],
-    ["Receita concluída", resumo.receitaBrutaConcluida, true],
-    ["Total recebido", resumo.totalRecebido, true],
-    ["Pendente", resumo.totalPendentePagamento, true],
-    ["Sinais pendentes", resumo.totalSinalPendente, true],
-    ["Ticket médio", resumo.ticketMedioConcluido, true]
+    ["Cancelados", totalCanceled]
   ];
   cards.forEach(([label, value, monetary]) => {
     grid.appendChild(createFinanceCard(label, value, monetary));
@@ -925,6 +925,50 @@ function createMobileDataList(columns, rows) {
   return list;
 }
 
+function createCompactMobileField(labelText, valueText, monetary = false) {
+  const field = document.createElement("div");
+  field.className = "compact-card-field";
+  const label = document.createElement("span");
+  const value = document.createElement("strong");
+  label.textContent = labelText;
+  value.textContent = displayValue(valueText);
+  if (monetary) value.classList.add("finance-money");
+  field.append(label, value);
+  return field;
+}
+
+function createMovementMobileList(items) {
+  const list = document.createElement("div");
+  list.className = "mobile-list data-mobile-list";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "mobile-data-card compact-mobile-card";
+    const heading = document.createElement("div");
+    heading.className = "compact-card-heading";
+    const client = document.createElement("strong");
+    const status = document.createElement("span");
+    client.textContent = displayValue(item.clienteNome);
+    status.className = "compact-status-badge";
+    status.textContent = displayValue(item.status);
+    heading.append(client, status);
+
+    const grid = document.createElement("div");
+    grid.className = "compact-card-grid";
+    grid.append(
+      createCompactMobileField("Data/Hora", `${displayValue(item.dataBr)} ${displayValue(item.horaInicio)}`),
+      createCompactMobileField("Profissional", item.profissionalNome),
+      createCompactMobileField("Serviço", item.servicoNome),
+      createCompactMobileField("Forma", item.paymentMethod),
+      createCompactMobileField("Total", formatCurrency(item.totalPrice), true),
+      createCompactMobileField("Pago", formatCurrency(item.amountPaid), true),
+      createCompactMobileField("Status pag.", item.paymentStatus)
+    );
+    card.append(heading, grid);
+    list.appendChild(card);
+  });
+  return list;
+}
+
 function createFinanceTable(title, columns, rows) {
   const section = document.createElement("section");
   section.className = "finance-table-section";
@@ -968,7 +1012,10 @@ function createFinanceTable(title, columns, rows) {
   });
   table.append(head, body);
   wrapper.appendChild(table);
-  section.append(wrapper, createMobileDataList(columns, rows));
+  const mobileList = title === "Movimentações do período"
+    ? createMovementMobileList(rows)
+    : createMobileDataList(columns, rows);
+  section.append(wrapper, mobileList);
   return section;
 }
 
@@ -1215,23 +1262,30 @@ function createCommissionMobileList(items) {
   list.className = "mobile-list data-mobile-list";
   items.forEach((commission) => {
     const card = document.createElement("article");
-    card.className = "mobile-data-card commission-mobile-card";
+    card.className = "mobile-data-card compact-mobile-card commission-mobile-card";
+    const heading = document.createElement("div");
+    heading.className = "compact-card-heading";
+    const client = document.createElement("strong");
+    const status = document.createElement("span");
+    client.textContent = displayValue(commission.clienteNome);
+    status.className = "compact-status-badge";
+    status.textContent = displayValue(commission.status);
+    heading.append(client, status);
+    const grid = document.createElement("div");
+    grid.className = "compact-card-grid";
     [
       ["Data", `${displayValue(commission.dataBr)} ${displayValue(commission.horaInicio)}`],
-      ["Cliente", commission.clienteNome],
       ["Profissional", commission.profissionalNome],
       ["Serviço", commission.servicoNome],
-      ["Comissão", formatCurrency(commission.valorComissao)],
-      ["Status", commission.status]
-    ].forEach(([fieldLabel, fieldValue]) => {
-      const field = document.createElement("div");
-      const label = document.createElement("span");
-      const value = document.createElement("strong");
-      label.textContent = fieldLabel;
-      value.textContent = displayValue(fieldValue);
-      field.append(label, value);
-      card.appendChild(field);
+      ["Valor recebido", formatCurrency(commission.valorRecebido), true],
+      ["Comissão", formatCurrency(commission.valorComissao), true],
+      ["Base cálculo", formatCurrency(commission.baseCalculo), true],
+      ["Tipo", commission.calculationType],
+      ["Percentual", commission.commissionPercent == null ? "—" : `${commission.commissionPercent}%`]
+    ].forEach(([fieldLabel, fieldValue, monetary]) => {
+      grid.appendChild(createCompactMobileField(fieldLabel, fieldValue, monetary));
     });
+    card.append(heading, grid);
     const actions = createCommissionActions(commission);
     actions.classList.add("mobile-card-actions");
     card.appendChild(actions);
