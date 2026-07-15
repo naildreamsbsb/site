@@ -214,9 +214,13 @@ h1, h2, h3, p { margin-top: 0; }
 .full-width { grid-column: 1 / -1; }
 .time-section { align-self: stretch; }
 .time-buttons { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .55rem; min-height: 42px; align-items: center; }
+.time-buttons[hidden] { display: none; }
 .time-button { padding: .55rem .8rem; color: var(--primary); background: #f7e9ee; border: 1px solid #e7bdcd; }
 .time-button.selected { color: #fff; background: var(--primary); }
-.selected-time { margin: .65rem 0 0; color: var(--primary-dark); font-weight: 700; }
+.selected-time-summary { display: flex; max-width: 440px; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .65rem; padding: .65rem .75rem; border: 1px solid #e7bdcd; border-radius: 10px; background: #fff8fa; }
+.selected-time-summary[hidden] { display: none; }
+.selected-time { margin: 0; color: var(--primary-dark); font-weight: 700; }
+.selected-time-summary button { flex: 0 0 auto; padding: .5rem .7rem; }
 .message { display: none; margin: 0 0 1rem; padding: .8rem 1rem; border-radius: 9px; }
 .message:not(:empty) { display: block; }
 .message.error { color: var(--error); background: #fdebed; }
@@ -273,6 +277,8 @@ h1, h2, h3, p { margin-top: 0; }
   .modal-actions button { width: 100%; }
   .full-width { grid-column: auto; }
   .form-row button, .form-action button, .full-width button { width: 100%; }
+  .selected-time-summary { width: 100%; max-width: none; align-items: stretch; flex-direction: column; }
+  .selected-time-summary button { width: 100%; }
   .card-whatsapp-actions .card-action-button { width: 100%; flex-basis: 100%; }
   .finance-filters button { width: 100%; }
   .commissions-filter-actions { flex-direction: column; }

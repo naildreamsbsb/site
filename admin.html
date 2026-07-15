@@ -218,7 +218,10 @@
           <span class="field-label">Horários disponíveis</span>
           <div id="available-times" class="time-buttons"><span class="muted">Preencha profissional, serviço e data.</span></div>
           <input id="selected-time" type="hidden">
-          <p id="selected-time-label" class="selected-time"></p>
+          <div id="selected-time-summary" class="selected-time-summary" hidden>
+            <strong id="selected-time-label" class="selected-time"></strong>
+            <button id="change-selected-time" class="button-secondary" type="button">Alterar horário</button>
+          </div>
         </div>
         <div class="full-width"><button id="create-button" type="submit" disabled>Criar agendamento</button></div>
       </form>

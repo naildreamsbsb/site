@@ -38,6 +38,7 @@ let currentUserRole = null;
 let appointmentAction = null;
 let appointmentActionSaving = false;
 let servicesRequestId = 0;
+let availableTimesRequestId = 0;
 let commissionBeingAdjusted = null;
 let commissionAdjustSaving = false;
 let allowedSections = new Set(["agenda", "new-appointment"]);
@@ -135,6 +136,7 @@ function showSection(sectionName) {
     console.warn("Não foi possível salvar a seção atual:", error);
   }
   closeSidebar();
+  if (safeSection === "new-appointment") resetNewAppointmentForm();
   if (safeSection === "settings" && currentUserRole === "admin") loadStudioSettings();
 }
 
@@ -784,7 +786,21 @@ function setServiceSelectPlaceholder(text, disabled = true) {
   select.disabled = disabled;
 }
 
+function resetNewAppointmentForm() {
+  servicesRequestId += 1;
+  document.querySelector("#appointment-form").reset();
+  document.querySelector("#cliente-nome").value = "";
+  document.querySelector("#cliente-phone").value = "";
+  document.querySelector("#cliente-email").value = "";
+  document.querySelector("#profissional").value = "";
+  document.querySelector("#appointment-date").value = "";
+  setServiceSelectPlaceholder("Selecione uma profissional primeiro");
+  resetAvailableTimes("Selecione uma profissional primeiro.");
+  showAppointmentMessage("");
+}
+
 function resetAvailableTimes(message = "") {
+  availableTimesRequestId += 1;
   clearAvailableTimes();
   if (message) {
     const hint = document.createElement("span");
@@ -855,10 +871,13 @@ function renderTimes(items) {
   const container = document.querySelector("#available-times");
   const selectedInput = document.querySelector("#selected-time");
   const selectedLabel = document.querySelector("#selected-time-label");
+  const selectedSummary = document.querySelector("#selected-time-summary");
   const createButton = document.querySelector("#create-button");
   container.replaceChildren();
+  container.hidden = false;
   selectedInput.value = "";
   selectedLabel.textContent = "";
+  selectedSummary.hidden = true;
   createButton.disabled = true;
 
   const times = (items || []).map(normalizeTime).filter(Boolean);
@@ -880,6 +899,8 @@ function renderTimes(items) {
       button.classList.add("selected");
       selectedInput.value = time;
       selectedLabel.textContent = `Horário selecionado: ${time}`;
+      container.hidden = true;
+      selectedSummary.hidden = false;
       createButton.disabled = false;
     });
     container.appendChild(button);
@@ -887,10 +908,21 @@ function renderTimes(items) {
 }
 
 function clearAvailableTimes() {
-  document.querySelector("#available-times").replaceChildren();
+  const container = document.querySelector("#available-times");
+  container.replaceChildren();
+  container.hidden = false;
   document.querySelector("#selected-time").value = "";
   document.querySelector("#selected-time-label").textContent = "";
+  document.querySelector("#selected-time-summary").hidden = true;
   document.querySelector("#create-button").disabled = true;
+}
+
+function reopenAvailableTimes() {
+  const container = document.querySelector("#available-times");
+  if (!container.children.length) return;
+  container.hidden = false;
+  document.querySelector("#selected-time-summary").hidden = true;
+  container.querySelector(".time-button.selected")?.focus();
 }
 
 async function searchAvailableTimes() {
@@ -902,6 +934,7 @@ async function searchAvailableTimes() {
     return;
   }
 
+  const requestId = ++availableTimesRequestId;
   const button = document.querySelector("#search-times-button");
   setBusy(button, true, "Buscando...");
   showAppointmentMessage("");
@@ -913,8 +946,10 @@ async function searchAvailableTimes() {
       p_intervalo_minutos: 30
     });
     if (error) throw error;
+    if (requestId !== availableTimesRequestId) return;
     renderTimes(data);
   } catch (error) {
+    if (requestId !== availableTimesRequestId) return;
     renderTimes([]);
     showToast(readableError(error, "Não foi possível buscar os horários."), "error");
   } finally {
@@ -959,10 +994,10 @@ async function createAppointment(event) {
     }
 
     showToast("Agendamento criado com sucesso!", "success");
-    document.querySelector("#cliente-nome").value = "";
-    document.querySelector("#cliente-phone").value = "";
-    document.querySelector("#cliente-email").value = "";
-    clearAvailableTimes();
+    resetNewAppointmentForm();
+    document.querySelector("#data-inicio").value = date;
+    document.querySelector("#data-fim").value = date;
+    showSection("agenda");
     await loadAgenda();
   } catch (error) {
     showToast(readableError(error, "Não foi possível criar o agendamento."), "error");
@@ -2162,7 +2197,6 @@ async function initializeAdmin() {
     const today = todayInSaoPaulo();
     document.querySelector("#data-inicio").value = today;
     document.querySelector("#data-fim").value = today;
-    document.querySelector("#appointment-date").value = today;
     await loadCatalogs();
     await loadAgenda();
     await loadClients();
@@ -2186,6 +2220,10 @@ document.querySelector("#profissional").addEventListener("change", loadServicesF
 document.querySelector("#servico").addEventListener("change", () => {
   resetAvailableTimes("Clique em Buscar horários para ver a disponibilidade.");
 });
+document.querySelector("#appointment-date").addEventListener("change", () => {
+  resetAvailableTimes("Clique em Buscar horários para ver a disponibilidade.");
+});
+document.querySelector("#change-selected-time").addEventListener("click", reopenAvailableTimes);
 document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
 document.querySelector("#commissions-form").addEventListener("submit", loadCommissions);
 document.querySelector("#generate-commissions-button").addEventListener("click", generateCommissions);
