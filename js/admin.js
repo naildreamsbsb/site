@@ -25,6 +25,9 @@ const registrationMessage = document.querySelector("#registration-message");
 const saveRegistrationButton = document.querySelector("#save-registration");
 const cancelRegistrationButton = document.querySelector("#cancel-registration");
 const closeRegistrationButton = document.querySelector("#close-registration-modal");
+const settingsForm = document.querySelector("#settings-form");
+const settingsMessage = document.querySelector("#settings-message");
+const saveSettingsButton = document.querySelector("#save-settings-button");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
@@ -44,6 +47,9 @@ let registrationSaving = false;
 let clientsCache = [];
 let professionalsCache = [];
 let servicesCache = [];
+let currentUserId = null;
+let settingsLoading = false;
+let settingsSaving = false;
 
 const SECTION_TITLES = {
   agenda: "Agenda",
@@ -51,6 +57,7 @@ const SECTION_TITLES = {
   clients: "Clientes",
   professionals: "Profissionais",
   services: "Serviços",
+  settings: "Configurações",
   finance: "Resumo financeiro / Caixa",
   commissions: "Comissões"
 };
@@ -116,12 +123,13 @@ function showSection(sectionName) {
     console.warn("Não foi possível salvar a seção atual:", error);
   }
   closeSidebar();
+  if (safeSection === "settings" && currentUserRole === "admin") loadStudioSettings();
 }
 
 function applyRoleBasedNavigation(profile) {
   const isAdmin = profile?.role === "admin";
   allowedSections = new Set(isAdmin
-    ? ["agenda", "new-appointment", "clients", "professionals", "services", "finance", "commissions"]
+    ? ["agenda", "new-appointment", "clients", "professionals", "services", "settings", "finance", "commissions"]
     : ["agenda", "new-appointment", "clients"]);
   document.querySelectorAll(".admin-only-navigation").forEach((item) => {
     item.hidden = !isAdmin;
@@ -1266,6 +1274,119 @@ async function toggleRegistrationActive(type, item) {
   }
 }
 
+function setSettingsValue(selector, value) {
+  document.querySelector(selector).value = value ?? "";
+}
+
+async function loadStudioSettings() {
+  if (currentUserRole !== "admin" || settingsLoading || settingsSaving) return;
+  settingsLoading = true;
+  saveSettingsButton.disabled = true;
+  showMessage(settingsMessage, "Carregando...", "info");
+  try {
+    const { data, error } = await supabaseClient
+      .from("studio_settings")
+      .select("*")
+      .eq("id", true)
+      .single();
+    if (error?.code === "PGRST116") {
+      throw new Error("As configurações do studio ainda não foram cadastradas.");
+    }
+    if (error) throw error;
+    if (!data) throw new Error("As configurações do studio ainda não foram cadastradas.");
+
+    setSettingsValue("#settings-studio-name", data.studio_name);
+    setSettingsValue("#settings-whatsapp", data.studio_whatsapp);
+    setSettingsValue("#settings-pix-key", data.pix_key);
+    setSettingsValue("#settings-timezone", data.timezone || "America/Sao_Paulo");
+    setSettingsValue("#settings-open-time", String(data.default_open_time || "").slice(0, 5));
+    setSettingsValue("#settings-close-time", String(data.default_close_time || "").slice(0, 5));
+    setSettingsValue("#settings-interval", data.appointment_interval_minutes);
+    document.querySelector("#settings-requires-deposit").checked = Boolean(data.requires_deposit_default);
+    setSettingsValue("#settings-deposit-percent", data.default_deposit_percent ?? 0);
+    setSettingsValue("#settings-confirmation-message", data.confirmation_message_template);
+    setSettingsValue("#settings-cancellation-message", data.cancellation_message_template);
+    setSettingsValue("#settings-no-show-message", data.no_show_message_template);
+    setSettingsValue("#settings-deposit-message", data.deposit_message_template);
+    setSettingsValue("#settings-notes", data.notes);
+
+    const closedDays = new Set(
+      (Array.isArray(data.closed_weekdays) ? data.closed_weekdays : []).map((day) => String(day))
+    );
+    document.querySelectorAll('input[name="closed-weekday"]').forEach((input) => {
+      input.checked = closedDays.has(input.value);
+    });
+    showMessage(settingsMessage, "");
+    saveSettingsButton.disabled = false;
+  } catch (error) {
+    console.error("Erro ao carregar configurações:", error);
+    const message = readableError(error, "Não foi possível carregar as configurações do sistema.");
+    showMessage(settingsMessage, message);
+    showToast(message, "error");
+  } finally {
+    settingsLoading = false;
+  }
+}
+
+async function saveStudioSettings(event) {
+  event.preventDefault();
+  if (currentUserRole !== "admin" || settingsLoading || settingsSaving) return;
+
+  const studioName = document.querySelector("#settings-studio-name").value.trim();
+  const openTime = document.querySelector("#settings-open-time").value;
+  const closeTime = document.querySelector("#settings-close-time").value;
+  const interval = Number(document.querySelector("#settings-interval").value);
+  const depositPercent = Number(document.querySelector("#settings-deposit-percent").value || 0);
+  if (!studioName) return showToast("Informe o nome do studio.", "error");
+  if (!openTime || !closeTime || closeTime <= openTime) {
+    return showToast("O horário de fechamento deve ser maior que o horário de abertura.", "error");
+  }
+  if (!Number.isFinite(interval) || interval <= 0) return showToast("O intervalo deve ser maior que zero.", "error");
+  if (!Number.isFinite(depositPercent) || depositPercent < 0 || depositPercent > 100) {
+    return showToast("O percentual de sinal deve ficar entre 0 e 100.", "error");
+  }
+
+  const closedWeekdays = [...document.querySelectorAll('input[name="closed-weekday"]:checked')]
+    .map((input) => Number(input.value))
+    .sort((a, b) => a - b);
+  const payload = {
+    studio_name: studioName,
+    studio_whatsapp: optionalValue("#settings-whatsapp"),
+    pix_key: optionalValue("#settings-pix-key"),
+    timezone: optionalValue("#settings-timezone"),
+    default_open_time: openTime,
+    default_close_time: closeTime,
+    closed_weekdays: closedWeekdays,
+    appointment_interval_minutes: interval,
+    requires_deposit_default: document.querySelector("#settings-requires-deposit").checked,
+    default_deposit_percent: depositPercent,
+    confirmation_message_template: optionalValue("#settings-confirmation-message"),
+    cancellation_message_template: optionalValue("#settings-cancellation-message"),
+    no_show_message_template: optionalValue("#settings-no-show-message"),
+    deposit_message_template: optionalValue("#settings-deposit-message"),
+    notes: optionalValue("#settings-notes"),
+    updated_by: currentUserId
+  };
+
+  settingsSaving = true;
+  setBusy(saveSettingsButton, true, "Salvando...");
+  showMessage(settingsMessage, "");
+  try {
+    const { error } = await supabaseClient
+      .from("studio_settings")
+      .update(payload)
+      .eq("id", true);
+    if (error) throw error;
+    showToast("Configurações salvas com sucesso!", "success");
+  } catch (error) {
+    console.error("Erro ao salvar configurações:", error);
+    showToast(readableError(error, "Não foi possível salvar as configurações."), "error");
+  } finally {
+    settingsSaving = false;
+    setBusy(saveSettingsButton, false, "");
+  }
+}
+
 function createFinanceCard(label, value, monetary = false) {
   const card = document.createElement("article");
   card.className = monetary ? "finance-card finance-card-value" : "finance-card";
@@ -1894,6 +2015,7 @@ async function initializeAdmin() {
     const access = await requireAdminAccess();
     if (!access) return;
     currentUserRole = access.profile.role;
+    currentUserId = access.session.user.id;
     applyRoleBasedNavigation(access.profile);
     const displayName = access.profile.nome || access.profile.name || access.profile.full_name;
     document.querySelector("#logged-user").textContent = displayName
@@ -1934,6 +2056,7 @@ document.querySelector("#clients-search-form").addEventListener("submit", loadCl
 document.querySelector("#new-client-button").addEventListener("click", () => openRegistrationModal("client"));
 document.querySelector("#new-professional-button").addEventListener("click", () => openRegistrationModal("professional"));
 document.querySelector("#new-service-button").addEventListener("click", () => openRegistrationModal("service"));
+settingsForm.addEventListener("submit", saveStudioSettings);
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);
 closeCompletionButton.addEventListener("click", closeCompletionModal);

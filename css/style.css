@@ -191,6 +191,18 @@ h1, h2, h3, p { margin-top: 0; }
 .registration-fields[hidden] { display: none; }
 .registration-full-width { grid-column: 1 / -1; }
 .checkbox-label { display: flex; align-items: center; gap: .5rem; min-height: 42px; padding-top: 1.3rem; }
+.settings-form { display: grid; gap: 1rem; }
+.settings-group { min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: #fffafb; }
+.settings-group legend { padding: 0 .4rem; color: var(--primary-dark); font-weight: 750; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; }
+.settings-grid-small { grid-template-columns: repeat(2, minmax(180px, 320px)); }
+.closed-days-area { margin-top: 1rem; }
+.closed-days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; margin-top: .5rem; }
+.closed-days-grid .checkbox-label { min-height: auto; padding: .55rem .65rem; border-radius: 8px; background: #faf6f7; }
+.settings-messages-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; }
+.template-help { margin-bottom: 1rem; color: var(--muted); font-size: .8rem; line-height: 1.7; }
+.template-help code { display: inline-block; padding: .08rem .3rem; border-radius: 4px; color: var(--primary-dark); background: #f7e9ee; }
+.settings-actions { display: flex; justify-content: flex-end; }
 .services-fieldset { margin: .4rem 0 0; padding: .9rem; border: 1px solid var(--border); border-radius: 10px; }
 .services-fieldset legend { padding: 0 .35rem; color: var(--muted); font-size: .86rem; font-weight: 700; }
 .services-checkbox-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
@@ -231,6 +243,10 @@ h1, h2, h3, p { margin-top: 0; }
   .management-heading button { width: 100%; }
   .management-search, .registration-fields { grid-template-columns: 1fr; }
   .registration-full-width { grid-column: auto; }
+  .settings-grid, .settings-grid-small, .settings-messages-grid { grid-template-columns: 1fr; }
+  .settings-group { padding: .8rem; }
+  .closed-days-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-actions button { width: 100%; }
   .services-checkbox-grid { grid-template-columns: 1fr; }
   .checkbox-label { padding-top: .5rem; }
   .finance-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin-bottom: 1rem; }
@@ -268,4 +284,5 @@ h1, h2, h3, p { margin-top: 0; }
   .mobile-data-card { grid-template-columns: 1fr; }
   .compact-card-grid { grid-template-columns: 1fr; }
   .mobile-card-actions { grid-column: auto; }
+  .closed-days-grid { grid-template-columns: 1fr; }
 }

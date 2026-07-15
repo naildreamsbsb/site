@@ -19,6 +19,7 @@
       <button class="sidebar-link" type="button" data-section="clients"><span>👤</span> Clientes</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="professionals" hidden><span>✦</span> Profissionais</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="services" hidden><span>♡</span> Serviços</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="settings" hidden><span>⚙</span> Configurações</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="finance" hidden><span>💳</span> Caixa</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="commissions" hidden><span>％</span> Comissões</button>
     </nav>
@@ -81,6 +82,70 @@
         <button id="new-service-button" type="button">Novo serviço</button>
       </div>
       <div id="services-content"></div>
+    </section>
+
+    <section id="section-settings" class="panel app-section">
+      <div class="section-heading">
+        <div><h2>Configurações do sistema</h2><p>Defina os dados, funcionamento e mensagens padrão do studio.</p></div>
+      </div>
+      <p id="settings-message" class="message" role="status" aria-live="polite"></p>
+      <form id="settings-form" class="settings-form">
+        <fieldset class="settings-group">
+          <legend>Dados do studio</legend>
+          <div class="settings-grid">
+            <label>Nome do studio<input id="settings-studio-name" type="text" required></label>
+            <label>WhatsApp do studio<input id="settings-whatsapp" type="tel"></label>
+            <label>Chave Pix<input id="settings-pix-key" type="text"></label>
+            <label>Timezone<input id="settings-timezone" type="text" placeholder="America/Sao_Paulo"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-group">
+          <legend>Funcionamento</legend>
+          <div class="settings-grid">
+            <label>Horário de abertura<input id="settings-open-time" type="time" required></label>
+            <label>Horário de fechamento<input id="settings-close-time" type="time" required></label>
+            <label>Intervalo em minutos<input id="settings-interval" type="number" min="1" step="1" required></label>
+          </div>
+          <div class="closed-days-area">
+            <span class="field-label">Dias fechados</span>
+            <div class="closed-days-grid">
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="0"> Domingo</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="1"> Segunda</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="2"> Terça</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="3"> Quarta</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="4"> Quinta</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="5"> Sexta</label>
+              <label class="checkbox-label"><input type="checkbox" name="closed-weekday" value="6"> Sábado</label>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-group">
+          <legend>Sinal</legend>
+          <div class="settings-grid settings-grid-small">
+            <label class="checkbox-label"><input id="settings-requires-deposit" type="checkbox"> Exige sinal por padrão?</label>
+            <label>Percentual padrão<input id="settings-deposit-percent" type="number" min="0" max="100" step="0.01"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-group">
+          <legend>Mensagens padrão</legend>
+          <p class="template-help">Variáveis disponíveis: <code>{cliente}</code> <code>{studio}</code> <code>{servico}</code> <code>{profissional}</code> <code>{data}</code> <code>{hora}</code> <code>{valor}</code> <code>{valor_sinal}</code> <code>{pix_key}</code></p>
+          <div class="settings-messages-grid">
+            <label>Mensagem de confirmação<textarea id="settings-confirmation-message" rows="4"></textarea></label>
+            <label>Mensagem de cancelamento<textarea id="settings-cancellation-message" rows="4"></textarea></label>
+            <label>Mensagem de não compareceu<textarea id="settings-no-show-message" rows="4"></textarea></label>
+            <label>Mensagem de sinal/Pix<textarea id="settings-deposit-message" rows="4"></textarea></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-group">
+          <legend>Observações internas</legend>
+          <label>Observações<textarea id="settings-notes" rows="4"></textarea></label>
+        </fieldset>
+        <div class="settings-actions"><button id="save-settings-button" type="submit">Salvar configurações</button></div>
+      </form>
     </section>
 
     <section id="section-finance" class="panel app-section finance-section">
