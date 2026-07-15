@@ -101,6 +101,10 @@ h1, h2, h3, p { margin-top: 0; }
 .action-cancel:hover:not(:disabled) { background: #842631; }
 .action-no-show { color: #68430a; background: #f5c96a; }
 .action-no-show:hover:not(:disabled) { color: #fff; background: #9a6812; }
+.card-whatsapp-actions { display: flex; margin-top: .65rem; }
+.card-whatsapp-actions .card-action-button { flex: 0 1 auto; }
+.action-whatsapp { color: #176b45; background: #e6f5ed; border: 1px solid #addbc4; }
+.action-whatsapp:hover:not(:disabled) { color: #fff; background: #20865a; }
 .appointment-closed { margin: 1rem 0 0; padding-top: .8rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; font-weight: 700; }
 .modal-open { overflow: hidden; }
 .modal-overlay { position: fixed; z-index: 2000; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(35, 24, 29, .62); }
@@ -269,6 +273,7 @@ h1, h2, h3, p { margin-top: 0; }
   .modal-actions button { width: 100%; }
   .full-width { grid-column: auto; }
   .form-row button, .form-action button, .full-width button { width: 100%; }
+  .card-whatsapp-actions .card-action-button { width: 100%; flex-basis: 100%; }
   .finance-filters button { width: 100%; }
   .commissions-filter-actions { flex-direction: column; }
   .commissions-filter-actions button { width: 100%; }

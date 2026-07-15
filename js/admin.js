@@ -50,6 +50,18 @@ let servicesCache = [];
 let currentUserId = null;
 let settingsLoading = false;
 let settingsSaving = false;
+let studioSettings = null;
+let studioSettingsLoadError = null;
+
+const STUDIO_SETTINGS_FALLBACK = {
+  studio_name: "Nail Dreams",
+  studio_whatsapp: "",
+  pix_key: "",
+  confirmation_message_template: "Olá, {cliente}! Seu agendamento no {studio} está confirmado para {data} às {hora}, com {profissional}. Serviço: {servico}.",
+  cancellation_message_template: "Olá, {cliente}. Seu agendamento no {studio}, marcado para {data} às {hora}, foi cancelado.",
+  no_show_message_template: "Olá, {cliente}. Registramos que você não compareceu ao agendamento de {servico} no {studio}, em {data} às {hora}.",
+  deposit_message_template: "Olá, {cliente}! Para confirmar seu agendamento de {servico} no {studio}, envie o sinal de {valor_sinal}. Chave Pix: {pix_key}."
+};
 
 const SECTION_TITLES = {
   agenda: "Agenda",
@@ -183,6 +195,48 @@ function formatCurrency(value) {
     style: "currency",
     currency: "BRL"
   }).format(numberValue(value));
+}
+
+function formatWhatsAppPhone(phone) {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (/^55\d{10,11}$/.test(digits)) return digits;
+  if (/^\d{10,11}$/.test(digits)) return `55${digits}`;
+  return null;
+}
+
+function formatMoneyBR(value) {
+  return formatCurrency(value);
+}
+
+function fillMessageTemplate(template, appointment) {
+  const templateMoney = (value) => value === null || value === undefined || value === ""
+    ? ""
+    : formatMoneyBR(value);
+  const variables = {
+    cliente: appointment?.clienteNome,
+    studio: studioSettings?.studio_name || STUDIO_SETTINGS_FALLBACK.studio_name,
+    servico: appointment?.servicoNome,
+    profissional: appointment?.profissionalNome,
+    data: appointment?.dataBr,
+    hora: appointment?.horaInicio,
+    valor: templateMoney(appointment?.totalPrice),
+    valor_sinal: templateMoney(appointment?.depositAmount),
+    pix_key: studioSettings?.pix_key
+  };
+
+  return String(template || "").replace(
+    /\{(cliente|studio|servico|profissional|data|hora|valor|valor_sinal|pix_key)\}/g,
+    (_, key) => variables[key] ?? ""
+  );
+}
+
+function openWhatsAppMessage(phone, message) {
+  const formattedPhone = formatWhatsAppPhone(phone);
+  if (!formattedPhone) return false;
+  const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+  const openedWindow = window.open(url, "_blank");
+  if (openedWindow) openedWindow.opener = null;
+  return true;
 }
 
 function addDetail(container, label, value) {
@@ -518,6 +572,56 @@ async function submitAppointmentActionModal(event) {
   }
 }
 
+function getWhatsAppAction(status) {
+  if (status === "solicitado" || status === "aguardando_sinal") {
+    return {
+      label: "WhatsApp · Enviar sinal/Pix",
+      templateKey: "deposit_message_template"
+    };
+  }
+  if (status === "confirmado") {
+    return {
+      label: "WhatsApp · Enviar confirmação",
+      templateKey: "confirmation_message_template"
+    };
+  }
+  if (status === "cancelado_cliente" || status === "cancelado_studio") {
+    return {
+      label: "WhatsApp · Enviar cancelamento",
+      templateKey: "cancellation_message_template"
+    };
+  }
+  if (status === "nao_compareceu") {
+    return {
+      label: "WhatsApp · Enviar não compareceu",
+      templateKey: "no_show_message_template"
+    };
+  }
+  return null;
+}
+
+function renderWhatsAppAction(card, appointment) {
+  const action = getWhatsAppAction(String(appointment.status || "").toLowerCase());
+  if (!action) return;
+
+  const actions = document.createElement("div");
+  actions.className = "card-whatsapp-actions";
+  const button = createActionButton(action.label, "action-whatsapp", () => {
+    if (!formatWhatsAppPhone(appointment.clientePhone)) {
+      showToast("Cliente sem telefone cadastrado.", "error");
+      return;
+    }
+    const template = studioSettings?.[action.templateKey]
+      || STUDIO_SETTINGS_FALLBACK[action.templateKey];
+    openWhatsAppMessage(
+      appointment.clientePhone,
+      fillMessageTemplate(template, appointment)
+    );
+  });
+  actions.appendChild(button);
+  card.appendChild(actions);
+}
+
 function renderCardActions(card, appointment) {
   const currentStatus = String(appointment.status || "").toLowerCase();
 
@@ -595,6 +699,7 @@ function renderAgenda(items) {
     addDetail(details, "Pagamento", appointment.paymentStatus);
     card.append(heading, details);
     renderCardActions(card, appointment);
+    renderWhatsAppAction(card, appointment);
     list.appendChild(card);
   });
 }
@@ -1278,11 +1383,15 @@ function setSettingsValue(selector, value) {
   document.querySelector(selector).value = value ?? "";
 }
 
-async function loadStudioSettings() {
-  if (currentUserRole !== "admin" || settingsLoading || settingsSaving) return;
-  settingsLoading = true;
-  saveSettingsButton.disabled = true;
-  showMessage(settingsMessage, "Carregando...", "info");
+function normalizeStudioSettings(data = {}) {
+  return {
+    ...STUDIO_SETTINGS_FALLBACK,
+    ...data,
+    studio_name: data.studio_name || STUDIO_SETTINGS_FALLBACK.studio_name
+  };
+}
+
+async function loadGlobalStudioSettings() {
   try {
     const { data, error } = await supabaseClient
       .from("studio_settings")
@@ -1294,6 +1403,29 @@ async function loadStudioSettings() {
     }
     if (error) throw error;
     if (!data) throw new Error("As configurações do studio ainda não foram cadastradas.");
+    studioSettings = normalizeStudioSettings(data);
+    studioSettingsLoadError = null;
+    return true;
+  } catch (error) {
+    console.warn("Não foi possível carregar as configurações globais; usando valores padrão:", error);
+    studioSettings = normalizeStudioSettings();
+    studioSettingsLoadError = error;
+    return false;
+  }
+}
+
+async function loadStudioSettings() {
+  if (currentUserRole !== "admin" || settingsLoading || settingsSaving) return;
+  settingsLoading = true;
+  saveSettingsButton.disabled = true;
+  showMessage(settingsMessage, "Carregando...", "info");
+  try {
+    if (studioSettingsLoadError) {
+      const loaded = await loadGlobalStudioSettings();
+      if (!loaded) throw studioSettingsLoadError;
+    }
+    if (!studioSettings) throw new Error("As configurações do studio ainda não foram carregadas.");
+    const data = studioSettings;
 
     setSettingsValue("#settings-studio-name", data.studio_name);
     setSettingsValue("#settings-whatsapp", data.studio_whatsapp);
@@ -1377,6 +1509,8 @@ async function saveStudioSettings(event) {
       .update(payload)
       .eq("id", true);
     if (error) throw error;
+    studioSettings = normalizeStudioSettings({ ...studioSettings, ...payload });
+    studioSettingsLoadError = null;
     showToast("Configurações salvas com sucesso!", "success");
   } catch (error) {
     console.error("Erro ao salvar configurações:", error);
@@ -2016,6 +2150,9 @@ async function initializeAdmin() {
     if (!access) return;
     currentUserRole = access.profile.role;
     currentUserId = access.session.user.id;
+    if (currentUserRole === "admin" || currentUserRole === "recepcao") {
+      await loadGlobalStudioSettings();
+    }
     applyRoleBasedNavigation(access.profile);
     const displayName = access.profile.nome || access.profile.name || access.profile.full_name;
     document.querySelector("#logged-user").textContent = displayName
