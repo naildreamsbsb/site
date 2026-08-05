@@ -34,6 +34,9 @@ h1, h2, h3, p { margin-top: 0; }
 .brand p { margin: .15rem 0 0; color: var(--muted); }
 .brand-mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; font-weight: 800; }
 .stack { display: grid; gap: 1rem; }
+.stack[hidden] { display: none; }
+.active-session p { margin-bottom: .25rem; color: var(--muted); line-height: 1.55; }
+.active-session strong { color: var(--text); overflow-wrap: anywhere; }
 .reset-card h1 { margin-bottom: .45rem; }
 .reset-intro { margin-bottom: 1.5rem; color: var(--muted); }
 .text-button { padding: .25rem; color: var(--primary); background: transparent; }

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#a94f72">
+  <title>Área da profissional | Nail Dreams</title>
+  <link rel="stylesheet" href="css/profissional.css">
+</head>
+<body class="professional-page">
+  <div id="page-loading" class="page-loading" role="status">Verificando seu acesso...</div>
+
+  <div id="professional-app" hidden>
+    <header class="professional-topbar">
+      <div class="professional-brand" aria-label="Nail Dreams">
+        <span class="brand-mark" aria-hidden="true">ND</span>
+        <div><strong>Nail Dreams</strong><span>Área da profissional</span></div>
+      </div>
+      <div class="professional-user">
+        <span id="professional-name">Profissional</span>
+        <button id="logout-button" class="secondary-button" type="button">Sair</button>
+      </div>
+    </header>
+
+    <nav class="professional-nav" aria-label="Navegação principal">
+      <button class="nav-button is-active" type="button" data-section="agenda" aria-current="page">Minha agenda</button>
+      <button class="nav-button" type="button" data-section="commissions">Minhas comissões</button>
+      <button class="nav-button" type="button" data-section="profile">Meu perfil</button>
+    </nav>
+
+    <main class="professional-content">
+      <section id="section-agenda" class="app-section is-active" aria-labelledby="agenda-title">
+        <div class="section-heading">
+          <div><h1 id="agenda-title">Minha agenda</h1><p>Seus próximos atendimentos, em um só lugar.</p></div>
+        </div>
+        <div class="date-filters" aria-label="Filtros da agenda">
+          <button class="filter-button is-active" type="button" data-date-filter="today">Hoje</button>
+          <button class="filter-button" type="button" data-date-filter="tomorrow">Amanhã</button>
+          <label class="date-picker">Escolher data<input id="agenda-date" type="date"></label>
+        </div>
+        <p id="agenda-message" class="message" role="status" aria-live="polite"></p>
+        <div id="agenda-list" class="agenda-list" aria-live="polite"></div>
+      </section>
+
+      <section id="section-commissions" class="app-section" aria-labelledby="commissions-title" hidden>
+        <div class="section-heading"><div><h1 id="commissions-title">Minhas comissões</h1><p>Resumo exclusivo dos seus atendimentos.</p></div></div>
+        <p id="commissions-message" class="message" role="status" aria-live="polite"></p>
+        <div id="commissions-summary" class="summary-grid">
+          <article class="summary-card featured"><span>Total calculado</span><strong id="commission-total">R$ 0,00</strong></article>
+          <article class="summary-card"><span>Pago</span><strong id="commission-paid">R$ 0,00</strong></article>
+          <article class="summary-card"><span>Pendente</span><strong id="commission-pending">R$ 0,00</strong></article>
+        </div>
+      </section>
+
+      <section id="section-profile" class="app-section" aria-labelledby="profile-title" hidden>
+        <div class="section-heading"><div><h1 id="profile-title">Meu perfil</h1><p>Seus dados profissionais.</p></div></div>
+        <article class="profile-card">
+          <dl class="profile-details">
+            <div><dt>Nome</dt><dd id="profile-name">—</dd></div>
+            <div><dt>E-mail</dt><dd id="profile-email">—</dd></div>
+            <div><dt>Telefone</dt><dd id="profile-phone">—</dd></div>
+            <div><dt>Especialidade</dt><dd id="profile-specialty">—</dd></div>
+          </dl>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="completion-modal" class="modal-overlay" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="completion-title">
+      <div class="modal-heading"><div><h2 id="completion-title">Concluir atendimento</h2><p id="completion-summary"></p></div><button id="close-completion" class="icon-button" type="button" aria-label="Fechar">×</button></div>
+      <form id="completion-form">
+        <div class="form-grid">
+          <label>Valor pago<input id="completion-amount" type="text" inputmode="decimal" required></label>
+          <label>Forma de pagamento<select id="completion-method" required><option>Pix</option><option>Dinheiro</option><option>Cartão de débito</option><option>Cartão de crédito</option><option>Outro</option></select></label>
+          <label>Status do pagamento<select id="completion-payment-status" required><option value="pago">Pago</option><option value="pendente">Pendente</option></select></label>
+          <label class="full-width">Observação (opcional)<textarea id="completion-notes" rows="3"></textarea></label>
+        </div>
+        <p id="completion-message" class="message" role="alert" aria-live="assertive"></p>
+        <div class="modal-actions"><button id="cancel-completion" class="secondary-button" type="button">Voltar</button><button id="confirm-completion" type="submit">Confirmar conclusão</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div id="app-toast" class="toast" hidden><span id="toast-message"></span><button id="close-toast" type="button" aria-label="Fechar aviso">×</button></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/profissional.js?v=2"></script>
+</body>
+</html>

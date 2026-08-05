@@ -21,10 +21,21 @@ async function getUserProfile(userId) {
     .from("profiles")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   return data;
+}
+
+async function requireAuthenticatedUser() {
+  const session = await getCurrentSession();
+  if (!session) {
+    window.location.replace("index.html");
+    return null;
+  }
+
+  const profile = await getUserProfile(session.user.id);
+  return { session, profile };
 }
 
 async function signOutAndRedirect(reason = "") {
@@ -34,19 +45,42 @@ async function signOutAndRedirect(reason = "") {
 }
 
 async function requireAdminAccess() {
-  const session = await getCurrentSession();
-  if (!session) {
-    window.location.replace("index.html");
-    return null;
-  }
-
-  const profile = await getUserProfile(session.user.id);
+  const access = await requireAuthenticatedUser();
+  if (!access) return null;
+  const { session, profile } = access;
   if (!ALLOWED_ROLES.includes(profile?.role)) {
     await signOutAndRedirect("Acesso negado: seu usuário não possui permissão para acessar o painel.");
     return null;
   }
 
   return { session, profile };
+}
+
+async function requireProfessionalAccess() {
+  const access = await requireAuthenticatedUser();
+  if (!access) return null;
+
+  if (access.profile?.role !== "profissional") {
+    await signOutAndRedirect("Acesso negado: seu usuário não possui permissão para acessar a área profissional.");
+    return null;
+  }
+
+  return access;
+}
+
+async function redirectByRole(profile) {
+  if (ALLOWED_ROLES.includes(profile?.role)) {
+    window.location.replace("admin.html");
+    return true;
+  }
+
+  if (profile?.role === "profissional") {
+    window.location.replace("profissional.html");
+    return true;
+  }
+
+  await signOutAndRedirect("Acesso negado: seu perfil ainda não possui uma área disponível.");
+  return false;
 }
 
 async function handleLogin(event) {
@@ -63,8 +97,8 @@ async function handleLogin(event) {
     });
     if (error) throw error;
 
-    const access = await requireAdminAccess();
-    if (access) window.location.replace("admin.html");
+    const access = await requireAuthenticatedUser();
+    if (access) await redirectByRole(access.profile);
   } catch (error) {
     showMessage(message, readableError(error, "Não foi possível fazer login. Verifique seus dados."));
     button.disabled = false;
@@ -101,6 +135,57 @@ async function handleForgotPassword() {
   }
 }
 
+let activeSessionProfile = null;
+
+function showLoginForm() {
+  activeSessionProfile = null;
+  document.querySelector("#active-session").hidden = true;
+  document.querySelector("#login-form").hidden = false;
+}
+
+function showActiveSession(session, profile) {
+  const displayName = profile?.nome
+    || profile?.name
+    || profile?.full_name
+    || session.user.user_metadata?.name
+    || session.user.user_metadata?.full_name
+    || session.user.email;
+
+  activeSessionProfile = profile;
+  document.querySelector("#active-session-user").textContent = displayName || "Usuário conectado";
+  document.querySelector("#login-form").hidden = true;
+  document.querySelector("#active-session").hidden = false;
+}
+
+async function handleContinueSession() {
+  const button = document.querySelector("#continue-session-button");
+  button.disabled = true;
+
+  try {
+    await redirectByRole(activeSessionProfile);
+  } catch (error) {
+    showMessage(document.querySelector("#login-message"), readableError(error, "Não foi possível continuar com esta sessão."));
+    button.disabled = false;
+  }
+}
+
+async function handleSwitchUser() {
+  const button = document.querySelector("#switch-user-button");
+  button.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    showMessage(document.querySelector("#login-message"), "", "info");
+    showLoginForm();
+    document.querySelector("#email").focus();
+  } catch (error) {
+    showMessage(document.querySelector("#login-message"), readableError(error, "Não foi possível encerrar a sessão."));
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function initializeLogin() {
   const params = new URLSearchParams(window.location.search);
   const message = document.querySelector("#login-message");
@@ -110,8 +195,7 @@ async function initializeLogin() {
     const session = await getCurrentSession();
     if (!session) return;
     const profile = await getUserProfile(session.user.id);
-    if (ALLOWED_ROLES.includes(profile?.role)) window.location.replace("admin.html");
-    else await supabaseClient.auth.signOut();
+    showActiveSession(session, profile);
   } catch (error) {
     showMessage(message, readableError(error, "Não foi possível verificar sua sessão."));
   }
@@ -121,5 +205,7 @@ const loginForm = document.querySelector("#login-form");
 if (loginForm) {
   loginForm.addEventListener("submit", handleLogin);
   document.querySelector("#forgot-password-button").addEventListener("click", handleForgotPassword);
+  document.querySelector("#continue-session-button").addEventListener("click", handleContinueSession);
+  document.querySelector("#switch-user-button").addEventListener("click", handleSwitchUser);
   initializeLogin();
 }
