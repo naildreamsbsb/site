@@ -145,6 +145,10 @@ function showComingSoon() {
   showMessage("Esta funcionalidade será disponibilizada na próxima etapa.", "info");
 }
 
+function startBooking() {
+  window.location.assign("agendar.html");
+}
+
 async function initializeClientArea() {
   try {
     const { data, error } = await supabaseClient.auth.getSession();
@@ -166,7 +170,7 @@ async function initializeClientArea() {
 document.querySelector("#google-login-button").addEventListener("click", loginWithGoogle);
 document.querySelector("#logout-button").addEventListener("click", logout);
 document.querySelector("#denied-logout-button").addEventListener("click", logout);
-document.querySelector("#schedule-button").addEventListener("click", showComingSoon);
+document.querySelector("#schedule-button").addEventListener("click", startBooking);
 document.querySelector("#appointments-button").addEventListener("click", showComingSoon);
 
 initializeClientArea();

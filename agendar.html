@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escolha o serviço | Nail Dreams</title>
+  <link rel="stylesheet" href="css/agendar.css">
+</head>
+<body class="booking-page">
+  <header class="booking-header">
+    <a class="booking-brand" href="cliente.html" aria-label="Voltar para a área da cliente">
+      <span class="brand-mark">ND</span>
+      <span><strong>Nail Dreams</strong><small>Novo agendamento</small></span>
+    </a>
+    <a class="back-link" href="cliente.html">Voltar para minha área</a>
+  </header>
+
+  <main class="booking-main">
+    <div class="page-heading">
+      <p class="eyebrow">Etapa 1</p>
+      <h1>Escolha o serviço</h1>
+      <p>Selecione o cuidado que deseja agendar. Na próxima etapa, você escolherá a profissional.</p>
+    </div>
+
+    <p id="booking-message" class="message" role="alert" aria-live="polite"></p>
+
+    <section id="services-loading" class="loading-card" aria-live="polite">
+      <span class="loading-mark" aria-hidden="true"></span>
+      <p>Carregando serviços disponíveis...</p>
+    </section>
+
+    <section id="services-content" class="services-content" aria-label="Serviços disponíveis" hidden></section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/agendar.js"></script>
+</body>
+</html>
