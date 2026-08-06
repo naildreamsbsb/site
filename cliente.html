@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Área da cliente | Nail Dreams</title>
+  <link rel="stylesheet" href="css/cliente.css">
+</head>
+<body class="client-page">
+  <header class="client-header">
+    <a class="client-brand" href="index.html" aria-label="Voltar ao site Nail Dreams">
+      <span class="brand-mark">ND</span>
+      <span><strong>Nail Dreams</strong><small>Área da cliente</small></span>
+    </a>
+    <a class="site-link" href="index.html">Voltar ao site</a>
+  </header>
+
+  <main class="client-main">
+    <p id="client-message" class="message" role="alert" aria-live="polite"></p>
+
+    <section id="client-loading" class="client-card client-state" aria-live="polite">
+      <span class="loading-mark" aria-hidden="true"></span>
+      <h1>Preparando sua área</h1>
+      <p>Estamos verificando sua sessão.</p>
+    </section>
+
+    <section id="client-login" class="client-card client-state" hidden>
+      <span class="welcome-mark" aria-hidden="true">ND</span>
+      <p class="eyebrow">Bem-vinda à Nail Dreams</p>
+      <h1>Entre com Google para acessar seus agendamentos</h1>
+      <p>Use sua conta Google para entrar com segurança e acompanhar sua experiência no studio.</p>
+      <button id="google-login-button" type="button">Entrar com Google</button>
+    </section>
+
+    <section id="client-access-denied" class="client-card client-state" hidden>
+      <span class="welcome-mark denied" aria-hidden="true">!</span>
+      <p class="eyebrow">Acesso restrito</p>
+      <h1>Este perfil não possui acesso à área da cliente</h1>
+      <p>Entre com uma conta de cliente ou utilize a área correspondente ao seu perfil.</p>
+      <button id="denied-logout-button" class="button-secondary" type="button">Sair desta conta</button>
+    </section>
+
+    <section id="client-dashboard" class="dashboard" hidden>
+      <div class="dashboard-heading">
+        <div>
+          <p class="eyebrow">Sua área Nail Dreams</p>
+          <h1>Olá, <span id="client-name">cliente</span>!</h1>
+          <p id="client-email" class="client-email"></p>
+        </div>
+        <button id="logout-button" class="button-secondary" type="button">Sair</button>
+      </div>
+
+      <div class="action-grid">
+        <article class="action-card">
+          <span aria-hidden="true">＋</span>
+          <h2>Agendar horário</h2>
+          <p>Em breve você poderá escolher serviço, profissional, data e horário.</p>
+          <button id="schedule-button" type="button">Agendar horário</button>
+        </article>
+
+        <article class="action-card">
+          <span aria-hidden="true">◷</span>
+          <h2>Meus agendamentos</h2>
+          <p>Consulte seus próximos atendimentos e o histórico da sua agenda.</p>
+          <button id="appointments-button" class="button-secondary" type="button">Meus agendamentos</button>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/cliente.js"></script>
+</body>
+</html>
