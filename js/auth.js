@@ -30,7 +30,7 @@ async function getUserProfile(userId) {
 async function requireAuthenticatedUser() {
   const session = await getCurrentSession();
   if (!session) {
-    window.location.replace("index.html");
+    window.location.replace("login.html");
     return null;
   }
 
@@ -41,7 +41,7 @@ async function requireAuthenticatedUser() {
 async function signOutAndRedirect(reason = "") {
   await supabaseClient.auth.signOut();
   const query = reason ? `?message=${encodeURIComponent(reason)}` : "";
-  window.location.replace(`index.html${query}`);
+  window.location.replace(`login.html${query}`);
 }
 
 async function requireAdminAccess() {

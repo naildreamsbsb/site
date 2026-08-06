@@ -71,7 +71,7 @@ async function handlePasswordReset(event) {
     showResetMessage("Senha alterada com sucesso. Faça login novamente.", "success");
     resetForm.reset();
     await supabaseClient.auth.signOut();
-    window.setTimeout(() => window.location.replace("index.html"), 3000);
+    window.setTimeout(() => window.location.replace("login.html"), 3000);
   } catch (error) {
     showResetMessage(error?.message || "Não foi possível alterar a senha. Tente novamente.");
     savePasswordButton.disabled = false;

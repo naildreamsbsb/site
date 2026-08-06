@@ -316,7 +316,7 @@ function showSection(name) {
 async function redirectToLogin(message = "") {
   await supabaseClient.auth.signOut();
   const query = message ? `?message=${encodeURIComponent(message)}` : "";
-  window.location.replace(`index.html${query}`);
+  window.location.replace(`login.html${query}`);
 }
 
 async function initialize() {
@@ -325,7 +325,7 @@ async function initialize() {
     if (sessionError) throw sessionError;
     const session = sessionData.session;
     if (!session) {
-      window.location.replace("index.html");
+      window.location.replace("login.html");
       return;
     }
     const { data: profile, error: profileError } = await supabaseClient.from("profiles").select("*").eq("id", session.user.id).single();

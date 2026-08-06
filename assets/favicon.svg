@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect width="120" height="120" rx="28" fill="#f3ede7"/>
+<text x="60" y="74" text-anchor="middle" font-family="Georgia, serif" font-size="46" font-weight="700" fill="#3b241b">ND</text>
+<path d="M25 86 C48 98,72 98,95 86" fill="none" stroke="#a87555" stroke-width="4" stroke-linecap="round"/>
+</svg>
