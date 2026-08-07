@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirme seu agendamento | Nail Dreams</title>
+  <link rel="stylesheet" href="css/agendar-confirmacao.css">
+</head>
+<body class="booking-page">
+  <header class="booking-header">
+    <a class="booking-brand" href="cliente.html" aria-label="Voltar para a área da cliente">
+      <img class="brand-logo" src="assets/logo.png" alt="Logo Studio Nail Dreams">
+      <span><strong>Nail Dreams</strong><small>Novo agendamento</small></span>
+    </a>
+    <a class="back-link" href="agendar-horario.html">Voltar para horários</a>
+  </header>
+
+  <main class="booking-main">
+    <div class="page-heading">
+      <p class="eyebrow">Etapa 4</p>
+      <h1>Seu momento está quase garantido ✨</h1>
+      <p>Confira os detalhes antes de confirmar seu horário.</p>
+    </div>
+
+    <p id="confirmation-message" class="message" role="status" aria-live="polite"></p>
+
+    <section id="confirmation-card" class="confirmation-card" hidden>
+      <div class="confirmation-heading">
+        <span class="confirmation-mark" aria-hidden="true">✓</span>
+        <div>
+          <p class="eyebrow">Resumo da escolha</p>
+          <h2>Seu momento Nail Dreams</h2>
+        </div>
+      </div>
+
+      <dl class="confirmation-details">
+        <div><dt>Serviço</dt><dd id="summary-service">—</dd></div>
+        <div><dt>Profissional</dt><dd id="summary-professional">—</dd></div>
+        <div><dt>Data</dt><dd id="summary-date">—</dd></div>
+        <div><dt>Horário</dt><dd><span id="summary-start-time">—</span> às <span id="summary-end-time">—</span></dd></div>
+        <div><dt>Duração</dt><dd id="summary-duration">—</dd></div>
+        <div><dt>Valor</dt><dd id="summary-price">—</dd></div>
+      </dl>
+
+      <div id="deposit-summary" class="deposit-summary" hidden>
+        <span id="summary-deposit-percent">Sinal</span>
+        <strong id="summary-deposit-amount">—</strong>
+        <small>para confirmação</small>
+      </div>
+
+      <button id="confirm-booking-button" type="button">Confirmar meu momento</button>
+      <p class="confirmation-note">Após confirmar, nossa equipe dará continuidade ao seu atendimento. 💗</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/agendar-confirmacao.js"></script>
+</body>
+</html>

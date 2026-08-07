@@ -1,0 +1,63 @@
+:root {
+  --background: #f8f5f6;
+  --surface: #ffffff;
+  --text: #2e2529;
+  --muted: #766b70;
+  --primary: #a94f72;
+  --primary-dark: #873b59;
+  --border: #eadde2;
+  --error: #a5303d;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--background);
+}
+
+* { box-sizing: border-box; }
+body { min-width: 0; min-height: 100vh; margin: 0; background: radial-gradient(circle at top, #f3dfe7, var(--background) 38%); }
+button, input { font: inherit; }
+button { border: 0; border-radius: 9px; padding: .72rem 1.05rem; color: #fff; background: var(--primary); cursor: pointer; font-weight: 700; }
+button:hover:not(:disabled) { background: var(--primary-dark); }
+button:disabled { cursor: wait; opacity: .6; }
+[hidden] { display: none !important; }
+h1, h2, p { margin-top: 0; }
+
+.booking-header { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 1rem; padding: .35rem max(1rem, calc((100% - 1040px) / 2)); border-bottom: 1px solid var(--primary-dark); background: var(--primary); }
+.booking-brand { display: flex; align-items: center; gap: .75rem; color: #fff; text-decoration: none; }
+.booking-brand > span:last-child { display: flex; flex-direction: column; }
+.booking-brand small { margin-top: .08rem; color: rgba(255, 255, 255, .76); }
+.brand-logo { display: block; width: 60px; height: 60px; padding: 2.5px; border-radius: 50%; background: #fff; object-fit: contain; }
+.back-link { color: #fff; font-weight: 700; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+
+.booking-main { width: min(1040px, calc(100% - 2rem)); margin: 2.5rem auto 4rem; }
+.page-heading { max-width: 680px; margin-bottom: 1.5rem; }
+.page-heading h1 { margin-bottom: .65rem; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+.page-heading > p:last-child { color: var(--muted); line-height: 1.6; }
+.eyebrow { margin-bottom: .5rem; color: var(--primary-dark); font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.booking-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-bottom: 1.5rem; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--border); }
+.booking-summary div { display: flex; min-width: 0; flex-direction: column; gap: .25rem; padding: 1rem 1.15rem; background: #fffafb; }
+.booking-summary span { color: var(--muted); font-size: .75rem; }
+.booking-summary strong { overflow-wrap: anywhere; }
+.schedule-card { padding: clamp(1.25rem, 4vw, 1.8rem); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 28px rgba(72, 35, 50, .06); }
+.schedule-card > label { display: block; color: var(--muted); font-size: .88rem; font-weight: 700; }
+.schedule-card input { width: min(100%, 320px); margin-top: .45rem; padding: .75rem .8rem; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: #fff; }
+.schedule-card input:focus { outline: 2px solid #dca8bb; border-color: var(--primary); }
+.times-heading { margin-top: 1.8rem; padding-top: 1.4rem; border-top: 1px solid var(--border); }
+.times-heading h2 { margin-bottom: .35rem; font-size: 1.2rem; }
+.times-heading p { margin-bottom: 1rem; color: var(--muted); font-size: .88rem; }
+.time-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: .7rem; }
+.time-button { color: var(--primary-dark); background: #f7e9ee; border: 1px solid #e7bdcd; }
+.time-button:hover:not(:disabled) { color: #fff; }
+.empty-state { grid-column: 1 / -1; margin: 0; padding: 1.4rem; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); text-align: center; }
+.loading-area { display: flex; align-items: center; gap: .7rem; padding: 1rem 0; color: var(--muted); }
+.loading-mark { width: 24px; height: 24px; border: 3px solid #f0dce4; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.message { display: none; margin: 0 0 1.2rem; padding: .85rem 1rem; border-radius: 9px; }
+.message:not(:empty) { display: block; }
+.message.error { color: var(--error); background: #fdebed; }
+
+@media (max-width: 640px) {
+  .booking-main { margin-top: 1.5rem; }
+  .back-link { max-width: 130px; font-size: .85rem; text-align: right; }
+  .booking-summary { grid-template-columns: 1fr; }
+}

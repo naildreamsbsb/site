@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Escolha o serviço | Nail Dreams</title>
-  <link rel="stylesheet" href="css/agendar.css">
+  <title>Escolha a profissional | Nail Dreams</title>
+  <link rel="stylesheet" href="css/agendar-profissional.css">
 </head>
 <body class="booking-page">
   <header class="booking-header">
@@ -12,29 +12,29 @@
       <img class="brand-logo" src="assets/logo.png" alt="Logo Studio Nail Dreams">
       <span><strong>Nail Dreams</strong><small>Novo agendamento</small></span>
     </a>
-    <a class="back-link" href="cliente.html">Voltar para minha área</a>
+    <a class="back-link" href="agendar.html">Voltar para serviços</a>
   </header>
 
   <main class="booking-main">
     <div class="page-heading">
-      <p class="eyebrow">Etapa 1</p>
-      <h1>Escolha o serviço</h1>
-      <p>Selecione o cuidado que deseja agendar. Na próxima etapa, você escolherá a profissional.</p>
+      <p class="eyebrow">Etapa 2</p>
+      <h1>Escolha a profissional</h1>
+      <p>Profissionais disponíveis para <strong id="selected-service-name">o serviço escolhido</strong>.</p>
     </div>
 
     <p id="booking-message" class="message" role="alert" aria-live="polite"></p>
 
-    <section id="services-loading" class="loading-card" aria-live="polite">
+    <section id="professionals-loading" class="loading-card" aria-live="polite">
       <span class="loading-mark" aria-hidden="true"></span>
-      <p>Carregando serviços disponíveis...</p>
+      <p>Buscando profissionais disponíveis...</p>
     </section>
 
-    <section id="services-content" class="services-content" aria-label="Serviços disponíveis" hidden></section>
+    <section id="professionals-content" class="professionals-grid" aria-label="Profissionais disponíveis" hidden></section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
-  <script src="js/agendar.js"></script>
+  <script src="js/agendar-profissional.js"></script>
 </body>
 </html>

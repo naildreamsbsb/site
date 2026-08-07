@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escolha data e horário | Nail Dreams</title>
+  <link rel="stylesheet" href="css/agendar-horario.css">
+</head>
+<body class="booking-page">
+  <header class="booking-header">
+    <a class="booking-brand" href="cliente.html" aria-label="Voltar para a área da cliente">
+      <img class="brand-logo" src="assets/logo.png" alt="Logo Studio Nail Dreams">
+      <span><strong>Nail Dreams</strong><small>Novo agendamento</small></span>
+    </a>
+    <a class="back-link" href="agendar-profissional.html">Voltar para profissionais</a>
+  </header>
+
+  <main class="booking-main">
+    <div class="page-heading">
+      <p class="eyebrow">Etapa 3</p>
+      <h1>Escolha data e horário</h1>
+      <p>Selecione o melhor momento para o seu atendimento.</p>
+    </div>
+
+    <section class="booking-summary" aria-label="Resumo da seleção">
+      <div><span>Serviço</span><strong id="selected-service">—</strong></div>
+      <div><span>Profissional</span><strong id="selected-professional">—</strong></div>
+      <div><span>Duração</span><strong id="selected-duration">—</strong></div>
+    </section>
+
+    <p id="booking-message" class="message" role="alert" aria-live="polite"></p>
+
+    <section class="schedule-card">
+      <label for="booking-date">Data do atendimento</label>
+      <input id="booking-date" type="date" required>
+
+      <div class="times-heading">
+        <h2>Horários disponíveis</h2>
+        <p>Os horários consideram a duração completa do serviço.</p>
+      </div>
+
+      <div id="times-loading" class="loading-area" hidden>
+        <span class="loading-mark" aria-hidden="true"></span>
+        <span>Verificando disponibilidade...</span>
+      </div>
+
+      <div id="available-times" class="time-grid">
+        <p class="empty-state">Escolha uma data para visualizar os horários.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/agendar-horario.js"></script>
+</body>
+</html>

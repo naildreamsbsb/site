@@ -1,0 +1,99 @@
+:root {
+  --background: #f8f5f6;
+  --surface: #ffffff;
+  --text: #2e2529;
+  --muted: #766b70;
+  --primary: #a94f72;
+  --primary-dark: #873b59;
+  --border: #eadde2;
+  --success: #287a52;
+  --error: #a5303d;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--background);
+}
+
+* { box-sizing: border-box; }
+body { min-width: 0; min-height: 100vh; min-height: 100dvh; margin: 0; background: radial-gradient(circle at top, #f3dfe7, var(--background) 38%); }
+button { border: 0; border-radius: 9px; padding: .8rem 1.1rem; color: #fff; background: var(--primary); cursor: pointer; font: inherit; font-weight: 700; }
+button:hover:not(:disabled) { background: var(--primary-dark); }
+button:disabled { cursor: default; opacity: .68; }
+[hidden] { display: none !important; }
+h1, h2, p, dl, dd { margin-top: 0; }
+
+.booking-header { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 1rem; padding: .35rem max(1rem, calc((100% - 820px) / 2)); border-bottom: 1px solid var(--primary-dark); background: var(--primary); }
+.booking-brand { display: flex; align-items: center; gap: .75rem; color: #fff; text-decoration: none; }
+.booking-brand > span:last-child { display: flex; flex-direction: column; }
+.booking-brand small { margin-top: .08rem; color: rgba(255, 255, 255, .76); }
+.brand-logo { display: block; width: 60px; height: 60px; padding: 2.5px; border-radius: 50%; background: #fff; object-fit: contain; }
+.back-link { color: #fff; font-weight: 700; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+
+.booking-main { width: min(820px, calc(100% - 2rem)); margin: 1.5rem auto 2rem; }
+.page-heading { max-width: 680px; margin-bottom: 1rem; }
+.page-heading h1 { margin-bottom: .65rem; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+.page-heading > p:last-child { color: var(--muted); line-height: 1.6; }
+.eyebrow { margin-bottom: .5rem; color: var(--primary-dark); font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.confirmation-card { padding: clamp(1.2rem, 4vw, 1.7rem); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: 0 18px 48px rgba(72, 35, 50, .1); }
+.confirmation-heading { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.15rem; }
+.confirmation-heading .eyebrow { margin-bottom: .25rem; }
+.confirmation-heading h2 { margin-bottom: 0; color: var(--text); font-size: 1.48rem; letter-spacing: -.02em; }
+.confirmation-mark { display: grid; width: 52px; height: 52px; flex: 0 0 auto; place-items: center; border: 1px solid #e7bdcd; border-radius: 50%; color: #fff; background: var(--primary); box-shadow: 0 8px 20px rgba(169, 79, 114, .22); font-size: 1.2rem; font-weight: 800; }
+.confirmation-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: .9rem; overflow: hidden; border: 1px solid var(--border); border-radius: 13px; }
+.confirmation-details div { min-width: 0; padding: .72rem .85rem; border-bottom: 1px solid var(--border); }
+.confirmation-details div:nth-child(odd) { border-right: 1px solid var(--border); }
+.confirmation-details div:nth-last-child(-n + 2) { border-bottom: 0; }
+.confirmation-details dt { margin-bottom: .28rem; color: var(--muted); font-size: .75rem; }
+.confirmation-details dd { margin-bottom: 0; overflow-wrap: anywhere; font-weight: 750; }
+.confirmation-details div:nth-child(-n + 4) dd { color: var(--primary-dark); }
+.confirmation-details div:nth-child(4) { background: linear-gradient(135deg, #fff8fa, #f7e9ee); }
+.confirmation-details div:nth-child(4) dd { font-size: 1.08rem; font-weight: 850; }
+.deposit-summary { display: grid; grid-template-columns: 1fr auto; gap: .1rem 1rem; margin-bottom: .9rem; padding: .65rem .85rem; border: 1px solid #e7bdcd; border-radius: 12px; color: var(--primary-dark); background: #f7e9ee; }
+.deposit-summary span, .deposit-summary strong { font-weight: 800; }
+.deposit-summary small { grid-column: 1 / -1; color: var(--muted); }
+#confirm-booking-button { width: 100%; }
+.confirmation-note { margin: .55rem 0 0; color: var(--muted); font-size: .74rem; line-height: 1.35; text-align: center; }
+.message { display: none; margin: 0 0 .75rem; padding: .65rem .85rem; border-radius: 9px; }
+.message:not(:empty) { display: block; }
+.message.error { color: var(--error); background: #fdebed; }
+.message.success { color: var(--success); background: #e8f5ee; }
+
+@media (max-width: 580px) {
+  body { height: 100dvh; overflow: hidden; }
+  .booking-header { min-height: 68px; padding-top: .25rem; padding-bottom: .25rem; }
+  .brand-logo { width: 60px; height: 60px; }
+  .booking-brand small { font-size: .72rem; }
+  .booking-main { display: flex; width: min(100% - 1rem, 820px); height: calc(100dvh - 68px); margin: 0 auto; flex-direction: column; justify-content: center; }
+  .back-link { max-width: 120px; font-size: .85rem; text-align: right; }
+  .page-heading { margin-bottom: .55rem; }
+  .page-heading .eyebrow { margin-bottom: .2rem; font-size: .68rem; }
+  .page-heading h1 { margin-bottom: .2rem; font-size: 1.45rem; }
+  .page-heading > p:last-child { margin-bottom: 0; font-size: .78rem; line-height: 1.35; }
+  .confirmation-card { padding: 1rem; border-radius: 18px; }
+  .confirmation-heading { gap: .75rem; margin-bottom: .8rem; }
+  .confirmation-heading .eyebrow { margin-bottom: .1rem; font-size: .64rem; }
+  .confirmation-heading h2 { font-size: 1.18rem; }
+  .confirmation-mark { width: 42px; height: 42px; font-size: 1rem; }
+  .confirmation-details { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: .75rem; }
+  .confirmation-details div { padding: .62rem .7rem; }
+  .confirmation-details div:nth-child(1),
+  .confirmation-details div:nth-child(2) { grid-column: 1 / -1; border-right: 0; }
+  .confirmation-details div:nth-child(3),
+  .confirmation-details div:nth-child(5) { border-right: 1px solid var(--border); }
+  .confirmation-details div:nth-child(4) { border-right: 0; }
+  .confirmation-details dt { margin-bottom: .18rem; font-size: .67rem; }
+  .confirmation-details dd { font-size: .84rem; }
+  .confirmation-details div:nth-child(4) dd { font-size: 1rem; }
+  .deposit-summary { margin-bottom: .7rem; padding: .55rem .7rem; font-size: .8rem; }
+  .deposit-summary small { font-size: .68rem; }
+  #confirm-booking-button { padding: .65rem .8rem; }
+  .message { margin-bottom: .45rem; padding: .5rem .65rem; font-size: .78rem; }
+}
+
+@media (max-width: 580px) and (max-height: 650px) {
+  .page-heading > p:last-child { display: none; }
+  .page-heading { margin-bottom: .4rem; }
+  .confirmation-card { padding: .8rem; }
+  .confirmation-heading { margin-bottom: .55rem; }
+  .confirmation-details div { padding-top: .48rem; padding-bottom: .48rem; }
+}
