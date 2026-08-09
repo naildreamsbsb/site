@@ -1,322 +1,265 @@
 const PROFESSIONAL_ROLE = "profissional";
-const CLOSED_STATUSES = new Set(["concluido", "cancelado_cliente", "cancelado_studio", "nao_compareceu", "expirado"]);
-const COMPLETION_RPC = "marcar_agendamento_concluido_staff";
-const COMMISSIONS_RPC = "listar_minhas_comissoes_profissional";
-let currentProfile = null;
-let currentProfessional = null;
-let selectedAppointment = null;
-let completionSaving = false;
-let commissionsLoaded = false;
-let toastTimer;
+const PREFERRED_CONTRACT_STATUSES = new Set(["pendente_assinatura", "aguardando_validacao", "ativo"]);
 
-const valueFrom = (object, ...keys) => keys.map((key) => object?.[key]).find((value) => value !== undefined && value !== null && value !== "");
-const displayValue = (value) => value === undefined || value === null || value === "" ? "—" : String(value);
-const numberValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
-const formatCurrency = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numberValue(value));
+let currentContract = null;
+let sendingContract = false;
 
-function showMessage(element, text, type = "") {
+const $ = (selector) => document.querySelector(selector);
+
+function errorMessage(error, fallback) {
+  return error?.message || fallback;
+}
+
+function displayValue(value) {
+  return value === null || value === undefined || value === "" ? "—" : String(value);
+}
+
+function formatDate(value, includeTime = false) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return displayValue(value);
+  return new Intl.DateTimeFormat("pt-BR", includeTime
+    ? { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }
+    : { dateStyle: "short", timeZone: "UTC" }).format(date);
+}
+
+function formatPercentage(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toLocaleString("pt-BR")} %` : displayValue(value);
+}
+
+function professionalName(profile, professional, user) {
+  return professional?.name || professional?.nome || profile?.full_name || profile?.nome || profile?.name
+    || user?.user_metadata?.full_name || user?.user_metadata?.name || "Profissional";
+}
+
+function isPending(contract) {
+  return contract?.status === "pendente_assinatura";
+}
+
+function isActive(contract) {
+  return contract?.aceito === true && contract?.status === "ativo";
+}
+
+function isAwaitingValidation(contract) {
+  return contract?.status === "aguardando_validacao";
+}
+
+function setMessage(text, type = "") {
+  const element = $("#contract-message");
   element.textContent = text;
   element.className = `message${type ? ` ${type}` : ""}`;
 }
 
-function showToast(text, type = "success") {
-  window.clearTimeout(toastTimer);
-  const toast = document.querySelector("#app-toast");
-  document.querySelector("#toast-message").textContent = text;
-  toast.className = `toast${type === "error" ? " error" : ""}`;
-  toast.hidden = false;
-  toastTimer = window.setTimeout(() => { toast.hidden = true; }, type === "error" ? 7000 : 4500);
+function showToast(text) {
+  $("#toast-message").textContent = text;
+  $("#toast").hidden = false;
 }
 
-function readableError(error, fallback) {
-  return error?.message || fallback;
+function routeForRole(role) {
+  if (role === "admin" || role === "recepcao") return "admin.html";
+  if (role === "cliente") return "cliente.html";
+  return "login.html";
 }
 
-function rpcResultError(data) {
-  const result = Array.isArray(data) ? data[0] : data;
-  if (!result || typeof result !== "object") return null;
-  if (result.success === false || result.ok === false || result.error) {
-    return new Error(result.message || result.error || "A ação não pôde ser concluída.");
-  }
-  return null;
+function redirectForRole(role) {
+  window.location.replace(routeForRole(role));
 }
 
-function dateInSaoPaulo(offsetDays = 0) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit"
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + offsetDays));
-  return date.toISOString().slice(0, 10);
-}
-
-function normalizeAppointment(item) {
-  return {
-    raw: item,
-    id: valueFrom(item, "id", "agendamentoId", "agendamento_id"),
-    client: valueFrom(item, "clienteNome", "cliente_nome", "clientName", "cliente"),
-    phone: valueFrom(item, "clientePhone", "cliente_phone", "clienteTelefone", "cliente_telefone", "telefone"),
-    service: valueFrom(item, "servicoNome", "servico_nome", "serviceName", "servico"),
-    date: valueFrom(item, "dataBr", "data_br", "data", "appointmentDate"),
-    start: valueFrom(item, "horaInicio", "hora_inicio", "startTime", "horario"),
-    end: valueFrom(item, "horaFim", "hora_fim", "endTime"),
-    status: valueFrom(item, "status"),
-    total: valueFrom(item, "totalPrice", "total_price", "valorTotal", "valor_total", "valorServico", "valor_servico")
-  };
-}
-
-function addDetail(container, label, value) {
+function createDetail(label, value) {
   const wrapper = document.createElement("div");
-  const term = document.createElement("span");
-  const description = document.createElement("strong");
+  const term = document.createElement("dt");
+  const description = document.createElement("dd");
   term.textContent = label;
-  description.textContent = displayValue(value);
+  description.textContent = value;
   wrapper.append(term, description);
-  container.appendChild(wrapper);
+  return wrapper;
 }
 
-function formatWhatsAppPhone(phone) {
-  const digits = String(phone || "").replace(/\D/g, "");
-  if (/^55\d{10,11}$/.test(digits)) return digits;
-  if (/^\d{10,11}$/.test(digits)) return `55${digits}`;
-  return null;
-}
-
-function openWhatsApp(appointment) {
-  const phone = formatWhatsAppPhone(appointment.phone);
-  if (!phone) {
-    showToast("Cliente sem telefone válido cadastrado.", "error");
+function renderContract() {
+  const container = $("#contract-container");
+  container.replaceChildren();
+  if (!currentContract) {
+    const empty = document.createElement("article");
+    empty.className = "state-card";
+    empty.innerHTML = "<strong>Nenhum contrato disponível</strong><p>Quando seu contrato estiver pronto, ele aparecerá aqui.</p>";
+    container.appendChild(empty);
     return;
   }
-  const message = `Olá, ${displayValue(appointment.client)}! Estou entrando em contato sobre seu atendimento de ${displayValue(appointment.service)} na Nail Dreams.`;
-  const openedWindow = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-  if (openedWindow) openedWindow.opener = null;
+
+  const card = document.createElement("article");
+  card.className = "contract-card";
+  const header = document.createElement("header");
+  header.className = "contract-card-header";
+  const title = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = `Contrato ${displayValue(currentContract.numero_contrato)}`;
+  const heading = document.createElement("h2");
+  heading.textContent = `Versão ${displayValue(currentContract.versao)}`;
+  title.append(eyebrow, heading);
+  const badge = document.createElement("span");
+  badge.className = `status-badge ${isActive(currentContract) ? "active" : isPending(currentContract) ? "pending" : "neutral"}`;
+  badge.textContent = isActive(currentContract) ? "Contrato ativo" : isPending(currentContract) ? "Pendente de assinatura" : displayValue(currentContract.status).replaceAll("_", " ");
+  header.append(title, badge);
+
+  const details = document.createElement("dl");
+  details.className = "contract-details";
+  details.append(
+    createDetail("Número do contrato", displayValue(currentContract.numero_contrato)),
+    createDetail("Versão", displayValue(currentContract.versao)),
+    createDetail("Status", isActive(currentContract) ? "Contrato ativo" : displayValue(currentContract.status).replaceAll("_", " ")),
+    createDetail("Início", formatDate(currentContract.data_inicio)),
+    createDetail("Fim da experiência", formatDate(currentContract.data_fim_experiencia)),
+    createDetail("Percentual na experiência", formatPercentage(currentContract.percentual_experiencia)),
+    createDetail("Percentual após experiência", formatPercentage(currentContract.percentual_pos_experiencia)),
+    createDetail("Assinatura validada", currentContract.aceito ? "Sim" : "Não"),
+    createDetail("Validado em", formatDate(currentContract.aceito_em, true))
+  );
+
+  const actions = document.createElement("div");
+  actions.className = "contract-actions";
+  const viewButton = document.createElement("button");
+  viewButton.type = "button";
+  viewButton.className = "button-secondary";
+  viewButton.textContent = "Visualizar contrato";
+  viewButton.addEventListener("click", openContractModal);
+  actions.appendChild(viewButton);
+  if (isPending(currentContract)) {
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.className = "button-secondary";
+    downloadButton.textContent = "Baixar contrato";
+    downloadButton.addEventListener("click", downloadContract);
+    const uploadButton = document.createElement("button");
+    uploadButton.id = "upload-signed-contract";
+    uploadButton.type = "button";
+    uploadButton.textContent = "Enviar contrato assinado";
+    uploadButton.addEventListener("click", selectSignedContract);
+    actions.append(downloadButton, uploadButton);
+  }
+  if (isAwaitingValidation(currentContract)) {
+    const notice = document.createElement("p");
+    notice.className = "message success";
+    notice.textContent = "Seu contrato foi enviado para análise do Studio. A assinatura será conferida e, após a validação, o contrato ficará ativo.";
+    card.append(header, details, notice, actions);
+  } else {
+    card.append(header, details, actions);
+  }
+  container.appendChild(card);
 }
 
-function createAction(label, className, handler) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = className;
-  button.textContent = label;
-  button.addEventListener("click", handler);
-  return button;
-}
-
-function renderAgenda(data) {
-  const list = document.querySelector("#agenda-list");
-  const payload = Array.isArray(data) ? data : (data?.items || data?.agendamentos || []);
-  list.replaceChildren();
-  if (!payload.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = "Nenhum atendimento encontrado para esta data.";
-    list.appendChild(empty);
+function downloadContract() {
+  if (!currentContract?.conteudo_contrato) {
+    setMessage("O conteúdo deste contrato ainda não está disponível para download.", "error");
     return;
   }
-  payload.map(normalizeAppointment).forEach((appointment) => {
-    const card = document.createElement("article");
-    card.className = "appointment-card";
-    const heading = document.createElement("div");
-    heading.className = "card-heading";
-    const client = document.createElement("h2");
-    client.textContent = displayValue(appointment.client);
-    const status = document.createElement("span");
-    status.className = "status-badge";
-    status.textContent = displayValue(appointment.status).replaceAll("_", " ");
-    heading.append(client, status);
-    const details = document.createElement("div");
-    details.className = "card-details";
-    addDetail(details, "Serviço", appointment.service);
-    addDetail(details, "Data", appointment.date);
-    addDetail(details, "Horário", appointment.end ? `${displayValue(appointment.start)} – ${appointment.end}` : appointment.start);
-    addDetail(details, "Status", displayValue(appointment.status).replaceAll("_", " "));
-    card.append(heading, details);
-    const currentStatus = String(appointment.status || "").toLowerCase();
-    if (CLOSED_STATUSES.has(currentStatus)) {
-      const note = document.createElement("p");
-      note.className = "closed-note";
-      note.textContent = "Atendimento encerrado";
-      card.appendChild(note);
-    } else {
-      const actions = document.createElement("div");
-      actions.className = "card-actions";
-      actions.append(
-        createAction("WhatsApp", "whatsapp-button", () => openWhatsApp(appointment)),
-        createAction("Concluir", "", () => openCompletionModal(appointment))
-      );
-      card.appendChild(actions);
-    }
-    list.appendChild(card);
-  });
+  const blob = new Blob([currentContract.conteudo_contrato], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const contractNumber = String(currentContract.numero_contrato || currentContract.id || "profissional").replace(/[^a-zA-Z0-9_-]/g, "-");
+  link.href = url;
+  link.download = `contrato-${contractNumber}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
-async function loadAgenda(date) {
-  const message = document.querySelector("#agenda-message");
-  showMessage(message, "Carregando agenda...");
-  try {
-    const { data, error } = await supabaseClient.rpc("listar_minha_agenda_profissional", {
-      p_data_inicio: date,
-      p_data_fim: date
-    });
-    if (error) throw error;
-    const resultError = rpcResultError(data);
-    if (resultError) throw resultError;
-    renderAgenda(Array.isArray(data) && data.length === 1 && data[0]?.items ? data[0] : data);
-    showMessage(message, "");
-  } catch (error) {
-    console.error("Erro ao carregar agenda profissional:", error);
-    renderAgenda([]);
-    showMessage(message, readableError(error, "Não foi possível carregar sua agenda."), "error");
-  }
+function selectSignedContract() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/pdf,.pdf";
+  input.addEventListener("change", () => {
+    const [file] = input.files || [];
+    if (file) sendSignedContract(file);
+  }, { once: true });
+  input.click();
 }
 
-function selectDate(date, filterName = "") {
-  document.querySelector("#agenda-date").value = date;
-  document.querySelectorAll("[data-date-filter]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.dateFilter === filterName);
-  });
-  loadAgenda(date);
-}
-
-function openCompletionModal(appointment) {
-  selectedAppointment = appointment;
-  const form = document.querySelector("#completion-form");
-  form.reset();
-  document.querySelector("#completion-amount").value = appointment.total ?? "";
-  document.querySelector("#completion-method").value = "Pix";
-  document.querySelector("#completion-payment-status").value = "pago";
-  document.querySelector("#completion-summary").textContent = `${displayValue(appointment.client)} · ${displayValue(appointment.service)}`;
-  showMessage(document.querySelector("#completion-message"), "");
-  document.querySelector("#completion-modal").hidden = false;
+function openContractModal() {
+  if (!currentContract) return;
+  $("#contract-modal-title").textContent = `Contrato ${displayValue(currentContract.numero_contrato)}`;
+  $("#contract-full-content").textContent = displayValue(currentContract.conteudo_contrato);
+  $("#pending-modal").hidden = true;
+  $("#contract-modal").hidden = false;
   document.body.classList.add("modal-open");
-  document.querySelector("#completion-amount").focus();
+  $("#close-contract-modal").focus();
 }
 
-function closeCompletionModal() {
-  if (completionSaving) return;
-  selectedAppointment = null;
-  document.querySelector("#completion-modal").hidden = true;
-  document.body.classList.remove("modal-open");
+function closeModal(selector) {
+  $(selector).hidden = true;
+  if ($("#contract-modal").hidden && $("#pending-modal").hidden) document.body.classList.remove("modal-open");
 }
 
-function parseAmount(value) {
-  const cleaned = String(value).trim().replace(/[^\d,.-]/g, "");
-  return Number(cleaned.includes(",") ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned);
+async function loadContract() {
+  const { data, error } = await supabaseClient
+    .from("contratos_profissionais")
+    .select("id, numero_contrato, versao, status, data_inicio, data_fim_experiencia, percentual_experiencia, percentual_pos_experiencia, aceito, aceito_em, conteudo_contrato, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const contracts = data || [];
+  currentContract = contracts.find((contract) => PREFERRED_CONTRACT_STATUSES.has(contract.status)) || contracts[0] || null;
+  renderContract();
+  if (isPending(currentContract)) $("#pending-modal").hidden = false;
 }
 
-async function submitCompletion(event) {
-  event.preventDefault();
-  if (!selectedAppointment || completionSaving) return;
-  const amount = parseAmount(document.querySelector("#completion-amount").value);
-  const paymentStatus = document.querySelector("#completion-payment-status").value;
-  const message = document.querySelector("#completion-message");
-  if (!Number.isFinite(amount) || amount < 0 || (paymentStatus === "pago" && amount <= 0)) {
-    showMessage(message, "Informe um valor pago válido.", "error");
+async function sendSignedContract(file) {
+  if (!currentContract || !isPending(currentContract) || sendingContract) return;
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    setMessage("Selecione um arquivo PDF assinado pelo GOV.BR.", "error");
     return;
   }
-  completionSaving = true;
-  const confirmButton = document.querySelector("#confirm-completion");
-  confirmButton.disabled = true;
-  confirmButton.textContent = "Concluindo...";
-  showMessage(message, "");
+  sendingContract = true;
+  const button = $("#upload-signed-contract");
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  setMessage("");
+  // Referência temporária desta etapa. Deve ser substituída pela URL do Storage quando o upload for implementado.
+  const temporaryFileUrl = URL.createObjectURL(file);
   try {
-    const { data, error } = await supabaseClient.rpc(COMPLETION_RPC, {
-      p_agendamento_id: selectedAppointment.id,
-      p_amount_paid: amount,
-      p_payment_method: document.querySelector("#completion-method").value,
-      p_payment_status: paymentStatus,
-      p_notes: document.querySelector("#completion-notes").value.trim() || "Atendimento concluído pela profissional.",
-      p_payment_notes: null
+    const { error } = await supabaseClient.rpc("enviar_contrato_assinado_profissional", {
+      p_contrato_id: currentContract.id,
+      p_arquivo_assinado_url: temporaryFileUrl,
+      p_tipo_assinatura: "gov_br",
+      p_assinatura_referencia: null
     });
     if (error) throw error;
-    const resultError = rpcResultError(data);
-    if (resultError) throw resultError;
-    completionSaving = false;
-    closeCompletionModal();
-    await loadAgenda(document.querySelector("#agenda-date").value);
-    commissionsLoaded = false;
-    showToast("Atendimento concluído com sucesso!");
+    await loadContract();
+    setMessage("Seu contrato foi enviado para análise do Studio. A assinatura será conferida e, após a validação, o contrato ficará ativo.", "success");
+    showToast("Contrato enviado para análise do Studio 💗");
   } catch (error) {
-    console.error("Erro ao concluir atendimento:", error);
-    showMessage(message, readableError(error, "Não foi possível concluir o atendimento."), "error");
+    console.error("Erro ao enviar contrato assinado:", error);
+    setMessage(errorMessage(error, "Não foi possível enviar o contrato assinado. Tente novamente."), "error");
+    button.disabled = false;
+    button.textContent = "Enviar contrato assinado";
   } finally {
-    completionSaving = false;
-    confirmButton.disabled = false;
-    confirmButton.textContent = "Confirmar conclusão";
+    URL.revokeObjectURL(temporaryFileUrl);
+    sendingContract = false;
   }
 }
 
-function renderCommissions(data) {
-  const result = Array.isArray(data) ? (data[0] || {}) : (data || {});
-  const summary = result.resumo || result.summary || result;
-  const items = result.items || result.comissoes || (Array.isArray(data) ? data : []);
-  const values = items.reduce((accumulator, item) => {
-    const amount = numberValue(valueFrom(item, "valorComissao", "valor_comissao", "commissionAmount", "valor"));
-    const status = String(valueFrom(item, "status") || "").toLowerCase();
-    accumulator.total += amount;
-    if (status === "paga" || status === "pago") accumulator.paid += amount;
-    else if (status !== "cancelada" && status !== "cancelado") accumulator.pending += amount;
-    return accumulator;
-  }, { total: 0, paid: 0, pending: 0 });
-  document.querySelector("#commission-total").textContent = formatCurrency(valueFrom(summary, "totalCalculado", "total_calculado") ?? values.total);
-  document.querySelector("#commission-paid").textContent = formatCurrency(valueFrom(summary, "totalPago", "total_pago") ?? values.paid);
-  document.querySelector("#commission-pending").textContent = formatCurrency(valueFrom(summary, "totalPendente", "total_pendente") ?? values.pending);
-}
-
-async function loadCommissions() {
-  const message = document.querySelector("#commissions-message");
-  showMessage(message, "Carregando comissões...");
-  try {
-    const { data, error } = await supabaseClient.rpc(COMMISSIONS_RPC);
-    if (error) throw error;
-    const resultError = rpcResultError(data);
-    if (resultError) throw resultError;
-    renderCommissions(data);
-    commissionsLoaded = true;
-    showMessage(message, "");
-  } catch (error) {
-    console.error("Erro ao carregar comissões profissionais:", error);
-    renderCommissions({});
-    showMessage(message, readableError(error, "Não foi possível carregar suas comissões."), "error");
-  }
-}
-
-function renderProfile(session) {
-  const name = valueFrom(currentProfessional, "nome", "name", "full_name") || valueFrom(currentProfile, "nome", "name", "full_name");
-  document.querySelector("#professional-name").textContent = displayValue(name);
-  document.querySelector("#profile-name").textContent = displayValue(name);
-  document.querySelector("#profile-email").textContent = displayValue(valueFrom(currentProfile, "email") || session.user.email);
-  document.querySelector("#profile-phone").textContent = displayValue(valueFrom(currentProfessional, "telefone", "phone") || valueFrom(currentProfile, "telefone", "phone"));
-  document.querySelector("#profile-specialty").textContent = displayValue(valueFrom(currentProfessional, "especialidade", "specialty"));
-}
-
-function showProfessionalApp() {
-  const loading = document.querySelector("#page-loading");
-  const app = document.querySelector("#professional-app");
-  loading.hidden = true;
-  loading.style.display = "none";
-  app.hidden = false;
-  app.style.display = "";
-}
-
-function showSection(name) {
-  document.querySelectorAll(".app-section").forEach((section) => {
-    const active = section.id === `section-${name}`;
-    section.hidden = !active;
-    section.classList.toggle("is-active", active);
+function showSection(section) {
+  const sectionTitles = {
+    agenda: "Minha agenda",
+    solicitacoes: "Solicitações",
+    producao: "Produção",
+    comissoes: "Comissões"
+  };
+  const target = section === "dashboard" ? "dashboard" : section === "contrato" ? "contrato" : "coming-soon";
+  document.querySelectorAll(".panel-section").forEach((element) => {
+    const active = element.id === `section-${target}`;
+    element.hidden = !active;
+    element.classList.toggle("is-active", active);
   });
-  document.querySelectorAll(".nav-button").forEach((button) => {
-    const active = button.dataset.section === name;
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    const active = button.dataset.section === section;
     button.classList.toggle("is-active", active);
-    button.setAttribute("aria-current", active ? "page" : "false");
+    if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
   });
-  if (name === "commissions" && !commissionsLoaded) loadCommissions();
-}
-
-async function redirectToLogin(message = "") {
-  await supabaseClient.auth.signOut();
-  const query = message ? `?message=${encodeURIComponent(message)}` : "";
-  window.location.replace(`login.html${query}`);
+  if (target === "coming-soon") $("#coming-soon-title").textContent = sectionTitles[section] || "Em breve";
 }
 
 async function initialize() {
@@ -328,33 +271,50 @@ async function initialize() {
       window.location.replace("login.html");
       return;
     }
-    const { data: profile, error: profileError } = await supabaseClient.from("profiles").select("*").eq("id", session.user.id).single();
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles").select("*").eq("id", session.user.id).maybeSingle();
     if (profileError) throw profileError;
     if (profile?.role !== PROFESSIONAL_ROLE) {
-      await redirectToLogin("Acesso permitido somente para profissionais.");
+      redirectForRole(profile?.role);
       return;
     }
-    currentProfile = profile;
-    const { data: professional, error: professionalError } = await supabaseClient.from("profissionais").select("*").eq("profile_id", session.user.id).single();
+
+    const { data: professional, error: professionalError } = await supabaseClient
+      .from("profissionais").select("*").eq("profile_id", session.user.id).eq("active", true).maybeSingle();
     if (professionalError) throw professionalError;
-    currentProfessional = professional;
-    renderProfile(session);
-    showProfessionalApp();
-    selectDate(dateInSaoPaulo(), "today");
+    if (!professional) {
+      await supabaseClient.auth.signOut();
+      window.location.replace(`login.html?message=${encodeURIComponent("Cadastro profissional ativo não encontrado.")}`);
+      return;
+    }
+
+    const name = professionalName(profile, professional, session.user);
+    $("#professional-name").textContent = name;
+    $("#first-name").textContent = name.trim().split(/\s+/)[0];
+    await loadContract();
+    $("#page-loading").hidden = true;
+    $("#professional-app").hidden = false;
   } catch (error) {
-    console.error("Erro ao iniciar área profissional:", error);
-    await redirectToLogin("Não foi possível validar seu acesso profissional.");
+    console.error("Erro ao iniciar painel profissional:", error);
+    await supabaseClient.auth.signOut();
+    window.location.replace(`login.html?message=${encodeURIComponent("Não foi possível validar seu acesso profissional.")}`);
   }
 }
 
-document.querySelectorAll(".nav-button").forEach((button) => button.addEventListener("click", () => showSection(button.dataset.section)));
-document.querySelectorAll("[data-date-filter]").forEach((button) => button.addEventListener("click", () => selectDate(dateInSaoPaulo(button.dataset.dateFilter === "tomorrow" ? 1 : 0), button.dataset.dateFilter)));
-document.querySelector("#agenda-date").addEventListener("change", (event) => { if (event.target.value) selectDate(event.target.value); });
-document.querySelector("#completion-form").addEventListener("submit", submitCompletion);
-document.querySelector("#close-completion").addEventListener("click", closeCompletionModal);
-document.querySelector("#cancel-completion").addEventListener("click", closeCompletionModal);
-document.querySelector("#completion-modal").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeCompletionModal(); });
-document.querySelector("#close-toast").addEventListener("click", () => { document.querySelector("#app-toast").hidden = true; });
-document.querySelector("#logout-button").addEventListener("click", () => redirectToLogin());
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !document.querySelector("#completion-modal").hidden) closeCompletionModal(); });
+document.querySelectorAll(".nav-item").forEach((button) => button.addEventListener("click", () => showSection(button.dataset.section)));
+$("#logout-button").addEventListener("click", async () => { await supabaseClient.auth.signOut(); window.location.replace("login.html"); });
+$("#close-contract-modal").addEventListener("click", () => closeModal("#contract-modal"));
+$("#close-contract-button").addEventListener("click", () => closeModal("#contract-modal"));
+$("#dismiss-pending").addEventListener("click", () => closeModal("#pending-modal"));
+$("#view-pending-contract").addEventListener("click", openContractModal);
+$("#close-toast").addEventListener("click", () => { $("#toast").hidden = true; });
+$("#contract-modal").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeModal("#contract-modal"); });
+$("#pending-modal").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeModal("#pending-modal"); });
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!$("#contract-modal").hidden) closeModal("#contract-modal");
+  else if (!$("#pending-modal").hidden) closeModal("#pending-modal");
+});
+
 initialize();

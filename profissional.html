@@ -4,89 +4,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#a94f72">
-  <title>Área da profissional | Nail Dreams</title>
+  <title>Painel da profissional | Nail Dreams</title>
   <link rel="stylesheet" href="css/profissional.css">
 </head>
-<body class="professional-page">
-  <div id="page-loading" class="page-loading" role="status">Verificando seu acesso...</div>
+<body>
+  <div id="page-loading" class="page-loading" role="status" aria-live="polite">
+    <span class="loading-spinner" aria-hidden="true"></span>
+    <p>Preparando seu painel...</p>
+  </div>
 
-  <div id="professional-app" hidden>
-    <header class="professional-topbar">
-      <div class="professional-brand" aria-label="Nail Dreams">
-        <span class="brand-mark" aria-hidden="true">ND</span>
-        <div><strong>Nail Dreams</strong><span>Área da profissional</span></div>
-      </div>
-      <div class="professional-user">
+  <div id="professional-app" class="app-shell" hidden>
+    <header class="topbar">
+      <a class="brand" href="profissional.html" aria-label="Painel Nail Dreams">
+        <img src="assets/logo.png" alt="Logo Nail Dreams">
+        <span><strong>Nail Dreams</strong><small>Painel da profissional</small></span>
+      </a>
+      <div class="user-area">
         <span id="professional-name">Profissional</span>
-        <button id="logout-button" class="secondary-button" type="button">Sair</button>
+        <button id="logout-button" class="button-secondary" type="button">Sair</button>
       </div>
     </header>
 
-    <nav class="professional-nav" aria-label="Navegação principal">
-      <button class="nav-button is-active" type="button" data-section="agenda" aria-current="page">Minha agenda</button>
-      <button class="nav-button" type="button" data-section="commissions">Minhas comissões</button>
-      <button class="nav-button" type="button" data-section="profile">Meu perfil</button>
-    </nav>
+    <div class="workspace">
+      <nav class="sidebar" aria-label="Navegação principal">
+        <button class="nav-item is-active" type="button" data-section="dashboard" aria-current="page"><span aria-hidden="true">⌂</span>Dashboard</button>
+        <button class="nav-item" type="button" data-section="agenda"><span aria-hidden="true">▣</span>Minha agenda<small>Em breve</small></button>
+        <button class="nav-item" type="button" data-section="solicitacoes"><span aria-hidden="true">♡</span>Solicitações<small>Em breve</small></button>
+        <button class="nav-item" type="button" data-section="contrato"><span aria-hidden="true">◇</span>Meu contrato</button>
+        <button class="nav-item" type="button" data-section="producao"><span aria-hidden="true">↗</span>Produção<small>Em breve</small></button>
+        <button class="nav-item" type="button" data-section="comissoes"><span aria-hidden="true">$</span>Comissões<small>Em breve</small></button>
+      </nav>
 
-    <main class="professional-content">
-      <section id="section-agenda" class="app-section is-active" aria-labelledby="agenda-title">
-        <div class="section-heading">
-          <div><h1 id="agenda-title">Minha agenda</h1><p>Seus próximos atendimentos, em um só lugar.</p></div>
-        </div>
-        <div class="date-filters" aria-label="Filtros da agenda">
-          <button class="filter-button is-active" type="button" data-date-filter="today">Hoje</button>
-          <button class="filter-button" type="button" data-date-filter="tomorrow">Amanhã</button>
-          <label class="date-picker">Escolher data<input id="agenda-date" type="date"></label>
-        </div>
-        <p id="agenda-message" class="message" role="status" aria-live="polite"></p>
-        <div id="agenda-list" class="agenda-list" aria-live="polite"></div>
-      </section>
+      <main class="content">
+        <section id="section-dashboard" class="panel-section is-active" aria-labelledby="dashboard-title">
+          <div class="welcome-card">
+            <p class="eyebrow">Seu espaço Nail Dreams</p>
+            <h1 id="dashboard-title">Olá, <span id="first-name">profissional</span> 💗</h1>
+            <p>Acompanhe sua parceria e acesse as informações importantes do seu dia a dia.</p>
+          </div>
+          <div class="summary-grid" aria-label="Resumo financeiro">
+            <article class="summary-card"><span>Valor bruto no período</span><strong>—</strong><small>Em breve</small></article>
+            <article class="summary-card"><span>Comissão acumulada</span><strong>—</strong><small>Em breve</small></article>
+            <article class="summary-card"><span>Já recebido</span><strong>—</strong><small>Em breve</small></article>
+            <article class="summary-card"><span>Saldo disponível</span><strong>—</strong><small>Em breve</small></article>
+          </div>
+        </section>
 
-      <section id="section-commissions" class="app-section" aria-labelledby="commissions-title" hidden>
-        <div class="section-heading"><div><h1 id="commissions-title">Minhas comissões</h1><p>Resumo exclusivo dos seus atendimentos.</p></div></div>
-        <p id="commissions-message" class="message" role="status" aria-live="polite"></p>
-        <div id="commissions-summary" class="summary-grid">
-          <article class="summary-card featured"><span>Total calculado</span><strong id="commission-total">R$ 0,00</strong></article>
-          <article class="summary-card"><span>Pago</span><strong id="commission-paid">R$ 0,00</strong></article>
-          <article class="summary-card"><span>Pendente</span><strong id="commission-pending">R$ 0,00</strong></article>
-        </div>
-      </section>
+        <section id="section-contrato" class="panel-section" hidden aria-labelledby="contract-title">
+          <div class="section-heading"><div><p class="eyebrow">Parceria profissional</p><h1 id="contract-title">Meu contrato</h1><p>Consulte seu contrato profissional, assine pelo GOV.BR e acompanhe a validação do Studio.</p></div></div>
+          <p id="contract-message" class="message" role="status" aria-live="polite"></p>
+          <div id="contract-container"><article class="state-card">Carregando seu contrato...</article></div>
+        </section>
 
-      <section id="section-profile" class="app-section" aria-labelledby="profile-title" hidden>
-        <div class="section-heading"><div><h1 id="profile-title">Meu perfil</h1><p>Seus dados profissionais.</p></div></div>
-        <article class="profile-card">
-          <dl class="profile-details">
-            <div><dt>Nome</dt><dd id="profile-name">—</dd></div>
-            <div><dt>E-mail</dt><dd id="profile-email">—</dd></div>
-            <div><dt>Telefone</dt><dd id="profile-phone">—</dd></div>
-            <div><dt>Especialidade</dt><dd id="profile-specialty">—</dd></div>
-          </dl>
-        </article>
-      </section>
-    </main>
+        <section id="section-coming-soon" class="panel-section" hidden aria-labelledby="coming-soon-title">
+          <article class="coming-card"><span aria-hidden="true">♡</span><p class="eyebrow">Novidade a caminho</p><h1 id="coming-soon-title">Em breve</h1><p>Este módulo está sendo preparado para deixar sua rotina ainda mais simples.</p></article>
+        </section>
+      </main>
+    </div>
   </div>
 
-  <div id="completion-modal" class="modal-overlay" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="completion-title">
-      <div class="modal-heading"><div><h2 id="completion-title">Concluir atendimento</h2><p id="completion-summary"></p></div><button id="close-completion" class="icon-button" type="button" aria-label="Fechar">×</button></div>
-      <form id="completion-form">
-        <div class="form-grid">
-          <label>Valor pago<input id="completion-amount" type="text" inputmode="decimal" required></label>
-          <label>Forma de pagamento<select id="completion-method" required><option>Pix</option><option>Dinheiro</option><option>Cartão de débito</option><option>Cartão de crédito</option><option>Outro</option></select></label>
-          <label>Status do pagamento<select id="completion-payment-status" required><option value="pago">Pago</option><option value="pendente">Pendente</option></select></label>
-          <label class="full-width">Observação (opcional)<textarea id="completion-notes" rows="3"></textarea></label>
-        </div>
-        <p id="completion-message" class="message" role="alert" aria-live="assertive"></p>
-        <div class="modal-actions"><button id="cancel-completion" class="secondary-button" type="button">Voltar</button><button id="confirm-completion" type="submit">Confirmar conclusão</button></div>
-      </form>
+  <div id="contract-modal" class="modal-overlay" hidden>
+    <section class="modal contract-modal" role="dialog" aria-modal="true" aria-labelledby="contract-modal-title">
+      <header class="modal-header"><div><p class="eyebrow">Nail Dreams</p><h2 id="contract-modal-title">Contrato profissional</h2></div><button id="close-contract-modal" class="icon-button" type="button" aria-label="Fechar contrato">×</button></header>
+      <div id="contract-full-content" class="contract-content"></div>
+      <footer class="modal-actions"><button id="close-contract-button" class="button-secondary" type="button">Fechar</button></footer>
     </section>
   </div>
 
-  <div id="app-toast" class="toast" hidden><span id="toast-message"></span><button id="close-toast" type="button" aria-label="Fechar aviso">×</button></div>
+  <div id="pending-modal" class="modal-overlay" hidden>
+    <section class="modal pending-modal" role="dialog" aria-modal="true" aria-labelledby="pending-title">
+      <span class="modal-heart" aria-hidden="true">♡</span>
+      <h2 id="pending-title">Seu contrato está disponível 💗</h2>
+      <p>Antes de seguirmos com essa nova etapa, revise seu contrato profissional. Ele reúne as condições da sua parceria com o Nail Dreams.</p>
+      <div class="modal-actions"><button id="dismiss-pending" class="button-secondary" type="button">Agora não</button><button id="view-pending-contract" type="button">Ver contrato</button></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-message"></span><button id="close-toast" type="button" aria-label="Fechar mensagem">×</button></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
-  <script src="js/profissional.js?v=2"></script>
+  <script src="js/profissional.js"></script>
 </body>
 </html>

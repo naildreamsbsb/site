@@ -18,6 +18,7 @@
       <button class="sidebar-link" type="button" data-section="new-appointment"><span>＋</span> Novo agendamento</button>
       <button class="sidebar-link" type="button" data-section="clients"><span>👤</span> Clientes</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="professionals" hidden><span>✦</span> Profissionais</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="contracts" hidden><span>▤</span> Contratos</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="services" hidden><span>♡</span> Serviços</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="settings" hidden><span>⚙</span> Configurações</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="finance" hidden><span>💳</span> Caixa</button>
@@ -74,6 +75,14 @@
         <button id="new-professional-button" type="button">Nova profissional</button>
       </div>
       <div id="professionals-content"></div>
+    </section>
+
+    <section id="section-contracts" class="panel app-section">
+      <div class="section-heading">
+        <div><h2>Contratos</h2><p>Consulte os contratos profissionais e acompanhe o status de cada documento.</p></div>
+      </div>
+      <p id="contracts-message" class="message" role="status" aria-live="polite"></p>
+      <div id="contracts-content"></div>
     </section>
 
     <section id="section-services" class="panel app-section">
@@ -390,6 +399,42 @@
           <button id="confirm-commission-adjust" type="submit">Confirmar</button>
         </div>
       </form>
+    </section>
+  </div>
+
+  <div id="contract-view-modal" class="modal-overlay" hidden>
+    <section class="completion-modal" role="dialog" aria-modal="true" aria-labelledby="contract-view-title">
+      <div class="modal-heading">
+        <div>
+          <h2 id="contract-view-title">Dados do contrato</h2>
+          <p>Informações registradas para este contrato profissional.</p>
+        </div>
+        <button id="close-contract-view" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+      <div id="contract-view-details" class="action-summary"></div>
+      <section class="finance-table-section" aria-labelledby="contract-documents-title">
+        <h3 id="contract-documents-title">Documento assinado</h3>
+        <div id="contract-document-actions" class="card-actions"></div>
+      </section>
+      <div class="modal-actions">
+        <button id="back-contract-view" class="modal-secondary-button" type="button">Fechar</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="original-contract-modal" class="modal-overlay" hidden>
+    <section class="completion-modal registration-modal" role="dialog" aria-modal="true" aria-labelledby="original-contract-title">
+      <div class="modal-heading">
+        <div>
+          <h2 id="original-contract-title">Contrato original</h2>
+          <p>Conteúdo disponibilizado para a profissional.</p>
+        </div>
+        <button id="close-original-contract" class="modal-close" type="button" aria-label="Fechar contrato original">&times;</button>
+      </div>
+      <pre id="original-contract-content" class="finance-table-wrapper"></pre>
+      <div class="modal-actions">
+        <button id="back-original-contract" class="modal-secondary-button" type="button">Fechar</button>
+      </div>
     </section>
   </div>
 

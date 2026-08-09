@@ -28,6 +28,12 @@ const closeRegistrationButton = document.querySelector("#close-registration-moda
 const settingsForm = document.querySelector("#settings-form");
 const settingsMessage = document.querySelector("#settings-message");
 const saveSettingsButton = document.querySelector("#save-settings-button");
+const contractViewModal = document.querySelector("#contract-view-modal");
+const closeContractViewButton = document.querySelector("#close-contract-view");
+const backContractViewButton = document.querySelector("#back-contract-view");
+const originalContractModal = document.querySelector("#original-contract-modal");
+const closeOriginalContractButton = document.querySelector("#close-original-contract");
+const backOriginalContractButton = document.querySelector("#back-original-contract");
 let appointmentMessageTimeout;
 let completionAppointment = null;
 let completionSaving = false;
@@ -53,6 +59,7 @@ let settingsLoading = false;
 let settingsSaving = false;
 let studioSettings = null;
 let studioSettingsLoadError = null;
+let contractValidationSaving = false;
 
 const STUDIO_SETTINGS_FALLBACK = {
   studio_name: "Nail Dreams",
@@ -69,6 +76,7 @@ const SECTION_TITLES = {
   "new-appointment": "Novo agendamento",
   clients: "Clientes",
   professionals: "Profissionais",
+  contracts: "Contratos",
   services: "Serviços",
   settings: "Configurações",
   finance: "Resumo financeiro / Caixa",
@@ -138,12 +146,13 @@ function showSection(sectionName) {
   closeSidebar();
   if (safeSection === "new-appointment") resetNewAppointmentForm();
   if (safeSection === "settings" && currentUserRole === "admin") loadStudioSettings();
+  if (safeSection === "contracts" && currentUserRole === "admin") loadContracts();
 }
 
 function applyRoleBasedNavigation(profile) {
   const isAdmin = profile?.role === "admin";
   allowedSections = new Set(isAdmin
-    ? ["agenda", "new-appointment", "clients", "professionals", "services", "settings", "finance", "commissions"]
+    ? ["agenda", "new-appointment", "clients", "professionals", "contracts", "services", "settings", "finance", "commissions"]
     : ["agenda", "new-appointment", "clients"]);
   document.querySelectorAll(".admin-only-navigation").forEach((item) => {
     item.hidden = !isAdmin;
@@ -1089,6 +1098,283 @@ function renderManagementList(containerId, items, columns, type) {
     mobileList.appendChild(card);
   });
   container.append(wrapper, mobileList);
+}
+
+function contractValue(contract, ...keys) {
+  return keys.map((key) => contract?.[key]).find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function formatContractDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return displayValue(value);
+  const hasTime = String(value).includes("T") || String(value).includes(" ");
+  return new Intl.DateTimeFormat("pt-BR", hasTime
+    ? { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }
+    : { dateStyle: "short", timeZone: "UTC" }).format(date);
+}
+
+function formatContractPercentage(value) {
+  if (value === undefined || value === null || value === "") return "—";
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toLocaleString("pt-BR")} %` : displayValue(value);
+}
+
+function contractStatusLabel(status) {
+  const labels = {
+    pendente_assinatura: "Aguardando assinatura",
+    aguardando_validacao: "Aguardando validação",
+    ativo: "Ativo"
+  };
+  return labels[status] || displayValue(status).replaceAll("_", " ");
+}
+
+function normalizeContract(contract) {
+  const professionalRelation = contract?.profissionais || contract?.profissional;
+  const relatedProfessional = Array.isArray(professionalRelation) ? professionalRelation[0] : professionalRelation;
+  return {
+    raw: contract,
+    id: contractValue(contract, "id", "contrato_id", "contratoId"),
+    number: contractValue(contract, "numero_contrato", "numeroContrato", "numero"),
+    professional: contractValue(contract, "profissional_nome", "profissionalNome", "nome_profissional", "nomeProfissional")
+      || contractValue(relatedProfessional, "nome", "name", "full_name"),
+    status: contractValue(contract, "status"),
+    version: contractValue(contract, "versao", "version"),
+    experienceCommission: contractValue(contract, "percentual_experiencia", "percentualExperiencia", "comissao_experiencia", "comissaoExperiencia"),
+    postExperienceCommission: contractValue(contract, "percentual_pos_experiencia", "percentualPosExperiencia", "comissao_pos_experiencia", "comissaoPosExperiencia"),
+    startDate: contractValue(contract, "data_inicio", "dataInicio"),
+    sentAt: contractValue(contract, "enviado_em", "enviadoEm", "arquivo_assinado_enviado_em", "arquivoAssinadoEnviadoEm"),
+    validatedAt: contractValue(contract, "validado_em", "validadoEm", "aceito_em", "aceitoEm"),
+    validationNotes: contractValue(contract, "observacao_validacao", "observacaoValidacao", "observacoes_validacao", "observacoesValidacao"),
+    signedFileUrl: contractValue(contract, "arquivo_assinado_url", "arquivoAssinadoUrl"),
+    originalContent: contractValue(contract, "conteudo_contrato", "conteudoContrato")
+  };
+}
+
+function closeContractViewModal() {
+  contractViewModal.hidden = true;
+  if (originalContractModal.hidden) document.body.classList.remove("modal-open");
+}
+
+function closeOriginalContractModal() {
+  originalContractModal.hidden = true;
+  if (contractViewModal.hidden) document.body.classList.remove("modal-open");
+}
+
+function openOriginalContractModal(contract) {
+  document.querySelector("#original-contract-title").textContent = `Contrato original ${displayValue(contract.number)}`;
+  document.querySelector("#original-contract-content").textContent = displayValue(contract.originalContent);
+  originalContractModal.hidden = false;
+  document.body.classList.add("modal-open");
+  closeOriginalContractButton.focus();
+}
+
+function openContractViewModal(contract) {
+  document.querySelector("#contract-view-title").textContent = `Contrato ${displayValue(contract.number)}`;
+  const details = document.querySelector("#contract-view-details");
+  details.replaceChildren();
+  addDetail(details, "Profissional", contract.professional);
+  addDetail(details, "Status", contractStatusLabel(contract.status));
+  addDetail(details, "Número do contrato", contract.number);
+  addDetail(details, "Versão", contract.version);
+  addDetail(details, "Comissão experiência", formatContractPercentage(contract.experienceCommission));
+  addDetail(details, "Comissão pós experiência", formatContractPercentage(contract.postExperienceCommission));
+  addDetail(details, "Data início", formatContractDate(contract.startDate));
+  addDetail(details, "Enviado em", formatContractDate(contract.sentAt));
+  addDetail(details, "Validado em", formatContractDate(contract.validatedAt));
+  addDetail(details, "Observação validação", contract.validationNotes);
+
+  const documentActions = document.querySelector("#contract-document-actions");
+  documentActions.replaceChildren();
+  if (contract.signedFileUrl) {
+    documentActions.appendChild(createActionButton("Ver documento assinado", "action-confirm", () => {
+      const openedWindow = window.open(contract.signedFileUrl, "_blank", "noopener,noreferrer");
+      if (openedWindow) openedWindow.opener = null;
+    }));
+  } else {
+    const unavailable = document.createElement("span");
+    unavailable.className = "muted";
+    unavailable.textContent = "Nenhum documento assinado disponível.";
+    documentActions.appendChild(unavailable);
+  }
+  const originalButton = createActionButton("Visualizar contrato original", "management-edit-button", () => openOriginalContractModal(contract));
+  originalButton.disabled = !contract.originalContent;
+  documentActions.appendChild(originalButton);
+  contractViewModal.hidden = false;
+  document.body.classList.add("modal-open");
+  closeContractViewButton.focus();
+}
+
+function createContractAction(contract) {
+  const actions = document.createElement("div");
+  actions.className = "management-actions";
+  actions.appendChild(createActionButton("Visualizar", "management-edit-button", () => openContractViewModal(contract)));
+  if (contract.status === "aguardando_validacao") {
+    actions.appendChild(createActionButton("Validar contrato", "management-enable-button", (event) => validateContract(contract, event.currentTarget)));
+    actions.appendChild(createActionButton("Solicitar correção", "management-disable-button", (event) => requestContractCorrection(contract, event.currentTarget)));
+  }
+  return actions;
+}
+
+async function validateContract(contract, button) {
+  if (contractValidationSaving) return;
+  const confirmed = window.confirm(`Confirma a validação do contrato ${displayValue(contract.number)} de ${displayValue(contract.professional)}?`);
+  if (!confirmed) return;
+  contractValidationSaving = true;
+  setBusy(button, true, "Validando...");
+  try {
+    const { data, error } = await supabaseClient.rpc("validar_contrato_profissional", {
+      p_contrato_id: contract.id,
+      p_aprovado: true,
+      p_observacao: null
+    });
+    if (error) throw error;
+    const resultError = rpcResultError(data);
+    if (resultError) throw resultError;
+    await loadContracts();
+    showToast("Contrato validado com sucesso.", "success");
+  } catch (error) {
+    console.error("Erro ao validar contrato profissional:", error);
+    showToast(readableError(error, "Não foi possível validar o contrato."), "error");
+    if (button.isConnected) setBusy(button, false, "");
+  } finally {
+    contractValidationSaving = false;
+  }
+}
+
+async function requestContractCorrection(contract, button) {
+  if (contractValidationSaving) return;
+  const reasonInput = window.prompt("Informe o motivo da correção solicitada:");
+  if (reasonInput === null) return;
+  const reason = reasonInput.trim();
+  if (!reason) {
+    showToast("Informe o motivo da correção.", "error");
+    return;
+  }
+  contractValidationSaving = true;
+  setBusy(button, true, "Enviando...");
+  try {
+    const { data, error } = await supabaseClient.rpc("validar_contrato_profissional", {
+      p_contrato_id: contract.id,
+      p_aprovado: false,
+      p_observacao: reason
+    });
+    if (error) throw error;
+    const resultError = rpcResultError(data);
+    if (resultError) throw resultError;
+    await loadContracts();
+    showToast("Solicitação de correção enviada com sucesso.", "success");
+  } catch (error) {
+    console.error("Erro ao solicitar correção do contrato profissional:", error);
+    showToast(readableError(error, "Não foi possível solicitar a correção do contrato."), "error");
+    if (button.isConnected) setBusy(button, false, "");
+  } finally {
+    contractValidationSaving = false;
+  }
+}
+
+function renderContractSummary(contracts) {
+  const grid = document.createElement("div");
+  grid.className = "finance-card-grid";
+  const counts = {
+    active: contracts.filter((contract) => contract.status === "ativo").length,
+    signature: contracts.filter((contract) => contract.status === "pendente_assinatura").length,
+    validation: contracts.filter((contract) => contract.status === "aguardando_validacao").length
+  };
+  grid.append(
+    createFinanceCard("Total contratos", contracts.length),
+    createFinanceCard("Ativos", counts.active),
+    createFinanceCard("Aguardando assinatura", counts.signature),
+    createFinanceCard("Aguardando validação", counts.validation)
+  );
+  return grid;
+}
+
+function renderContracts(contracts) {
+  const content = document.querySelector("#contracts-content");
+  content.replaceChildren(renderContractSummary(contracts));
+  if (!contracts.length) {
+    const empty = document.createElement("p");
+    empty.className = "finance-empty-state";
+    empty.textContent = "Nenhum contrato encontrado.";
+    content.appendChild(empty);
+    return;
+  }
+
+  const columns = ["Profissional", "Contrato", "Status", "Comissão", "Data início", "Ações"];
+  const wrapper = document.createElement("div");
+  wrapper.className = "finance-table-wrapper table-scroll desktop-table";
+  const table = document.createElement("table");
+  table.className = "finance-table management-table";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  columns.forEach((label) => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = label;
+    headRow.appendChild(cell);
+  });
+  head.appendChild(headRow);
+  const body = document.createElement("tbody");
+  contracts.forEach((contract) => {
+    const row = document.createElement("tr");
+    [
+      displayValue(contract.professional),
+      displayValue(contract.number),
+      contractStatusLabel(contract.status),
+      `${formatContractPercentage(contract.experienceCommission)} / ${formatContractPercentage(contract.postExperienceCommission)}`,
+      formatContractDate(contract.startDate)
+    ].forEach((value, index) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      if (index === 2) cell.className = "commission-state";
+      row.appendChild(cell);
+    });
+    const actionCell = document.createElement("td");
+    actionCell.appendChild(createContractAction(contract));
+    row.appendChild(actionCell);
+    body.appendChild(row);
+  });
+  table.append(head, body);
+  wrapper.appendChild(table);
+
+  const mobileList = document.createElement("div");
+  mobileList.className = "mobile-list data-mobile-list";
+  contracts.forEach((contract) => {
+    const card = document.createElement("article");
+    card.className = "mobile-data-card management-mobile-card";
+    card.append(
+      createCompactMobileField("Profissional", contract.professional),
+      createCompactMobileField("Contrato", contract.number),
+      createCompactMobileField("Status", contractStatusLabel(contract.status)),
+      createCompactMobileField("Comissão", `${formatContractPercentage(contract.experienceCommission)} / ${formatContractPercentage(contract.postExperienceCommission)}`),
+      createCompactMobileField("Data início", formatContractDate(contract.startDate))
+    );
+    const actions = createContractAction(contract);
+    actions.classList.add("mobile-card-actions");
+    card.appendChild(actions);
+    mobileList.appendChild(card);
+  });
+  content.append(wrapper, mobileList);
+}
+
+async function loadContracts() {
+  if (currentUserRole !== "admin") return;
+  const message = document.querySelector("#contracts-message");
+  showMessage(message, "Carregando contratos...", "info");
+  try {
+    const { data, error } = await supabaseClient.rpc("listar_contratos_profissionais_admin");
+    if (error) throw error;
+    const resultError = rpcResultError(data);
+    if (resultError) throw resultError;
+    const payload = Array.isArray(data) ? data : data?.items || data?.contratos || data?.data || [];
+    renderContracts(payload.map(normalizeContract));
+    showMessage(message, "");
+  } catch (error) {
+    console.error("Erro ao carregar contratos profissionais:", error);
+    document.querySelector("#contracts-content").replaceChildren();
+    showMessage(message, readableError(error, "Não foi possível carregar os contratos."), "error");
+  }
 }
 
 async function loadClients(event) {
@@ -2258,6 +2544,21 @@ commissionAdjustModal.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();
+});
+closeContractViewButton.addEventListener("click", closeContractViewModal);
+backContractViewButton.addEventListener("click", closeContractViewModal);
+contractViewModal.addEventListener("click", (event) => {
+  if (event.target === contractViewModal) closeContractViewModal();
+});
+closeOriginalContractButton.addEventListener("click", closeOriginalContractModal);
+backOriginalContractButton.addEventListener("click", closeOriginalContractModal);
+originalContractModal.addEventListener("click", (event) => {
+  if (event.target === originalContractModal) closeOriginalContractModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!originalContractModal.hidden) closeOriginalContractModal();
+  else if (!contractViewModal.hidden) closeContractViewModal();
 });
 document.querySelector("#app-toast-close").addEventListener("click", hideToast);
 registrationForm.addEventListener("submit", saveRegistration);
