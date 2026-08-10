@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="css/site.css" />
 </head>
 
-<body>
+<body id="topo">
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
-<header class="site-header" id="topo">
+<header class="site-header">
 
   <!-- LOGO -->
   <a class="brand" href="#topo" aria-label="Studio Nail Dreams - início">
@@ -44,13 +44,6 @@
 
 </header>
 
-  <div class="campaign-strip" id="cmw-strip" hidden>
-    <a href="#capital-moto-week">
-      <strong>Nail Dreams no Capital Moto Week 2026</strong>
-      <span>Unhas para quem vive em movimento.</span>
-    </a>
-  </div>
-
   <main id="conteudo">
     <section class="hero">
       <div class="hero-copy">
@@ -63,7 +56,7 @@
 
         <div class="hero-actions">
           <a class="btn primary" href="cliente.html">
-            Agendar pelo WhatsApp
+            Agendar online
           </a>
           <a class="btn ghost" href="#servicos">Ver serviços</a>
         </div>
@@ -273,10 +266,26 @@
         </article>
 
         <article class="team-card">
-          <img src="assets/natalia.webp" alt="Retrato profissional de Natália Ramos" />
+          <img class="team-photo-top" src="assets/natalia.webp" alt="Retrato profissional de Natália Ramos" />
           <div>
             <h3>Natália Ramos</h3>
             <p>Fundadora do Studio Nail Dreams e especialista em unhas de gel.</p>
+          </div>
+        </article>
+
+        <article class="team-card">
+          <img src="assets/leonardo.webp" alt="Leonardo Dutra" />
+          <div>
+            <h3>Leonardo Dutra</h3>
+            <p>Medicina tradicional chinesa, ventosa terapia, auriculoterapia e quiropraxia.</p>
+          </div>
+        </article>
+
+        <article class="team-card">
+          <img class="team-photo-top" src="assets/viviane.webp" alt="Viviane Oliveira" />
+          <div>
+            <h3>Viviane Oliveira</h3>
+            <p>Extensão de cílios, design de sobrancelhas e lash design.</p>
           </div>
         </article>
       </div>
@@ -287,33 +296,32 @@
     <section class="official-booking section-pad" id="novo-agendamento">
       <div class="official-booking-card">
         <div class="official-booking-copy">
-          <span class="eyebrow">Novo agendamento oficial</span>
-          <h2>Em breve, sua experiência Nail Dreams começa pelo site.</h2>
+          <span class="eyebrow">Agendamento online</span>
+          <h2>Sua experiência Nail Dreams começa pelo site.</h2>
           <p>
-            Estamos preparando um sistema próprio de agendamento online para substituir plataformas externas.
-            A cliente poderá escolher serviço, profissional, data e horário, além de acompanhar, cancelar
-            ou reagendar com mais autonomia.
+            Escolha o serviço, a profissional e o melhor horário para realizar seu agendamento
+            com praticidade e segurança.
           </p>
 
           <div class="official-booking-actions">
             <a class="btn primary" href="cliente.html">
-              Agendar pelo WhatsApp
+              Agendar online
             </a>
             <a class="btn ghost" href="cliente.html">
-              Ver prévia do agendamento
+              Acessar área da cliente
             </a>
           </div>
 
           <small>
-            Enquanto a nova agenda online está sendo construída, o agendamento continua pelo WhatsApp oficial.
+            Entre com sua conta para consultar as opções disponíveis e agendar seu atendimento.
           </small>
         </div>
 
-        <div class="official-booking-steps" aria-label="Etapas do futuro agendamento online">
+        <div class="official-booking-steps" aria-label="Etapas do agendamento online">
           <article>
             <span>01</span>
             <strong>Login da cliente</strong>
-            <p>Acesso seguro para consultar, cancelar ou reagendar horários.</p>
+            <p>Acesso seguro para iniciar seu agendamento.</p>
           </article>
           <article>
             <span>02</span>
@@ -328,7 +336,7 @@
           <article>
             <span>04</span>
             <strong>Confirmação</strong>
-            <p>Resumo do agendamento e confirmação pelo canal oficial.</p>
+            <p>Revise os dados e envie sua solicitação pelo sistema.</p>
           </article>
         </div>
       </div>
@@ -337,28 +345,82 @@
     <section class="cmw-section section-pad" id="capital-moto-week">
       <div class="cmw-section-card">
         <div class="cmw-section-copy">
-          <span class="eyebrow">Experiência temporária</span>
+          <span class="eyebrow">Nossa história</span>
           <h2>Nail Dreams no Capital Moto Week 2026.</h2>
           <p>
-            Beleza, atitude e unhas impecáveis no maior evento motociclístico da América Latina.
-            Durante o evento, a Nail Dreams leva uma experiência especial para mulheres que vivem
-            o movimento com estilo, personalidade e autocuidado.
+            Uma experiência que marcou nossa história. Durante o evento, a Nail Dreams levou beleza,
+            atitude e unhas impecáveis para mulheres que vivem o movimento com estilo, personalidade
+            e autocuidado.
           </p>
 
-          <div class="cmw-actions">
-            <a class="btn primary" href="https://wa.me/5561985879423?text=Olá,%20Nail%20Dreams!%20Quero%20saber%20mais%20sobre%20a%20experiência%20no%20Capital%20Moto%20Week." target="_blank" rel="noopener">
-              Quero saber mais
-            </a>
-            <a class="btn ghost" href="https://www.instagram.com/naildreams.bsb/" target="_blank" rel="noopener">
-              Acompanhar no Instagram
-            </a>
-          </div>
         </div>
 
         <div class="cmw-visual">
-          <img class="cmw-logo" src="assets/capital-moto-week.webp" alt="Logo Capital Moto Week 2026" />
-          <img class="cmw-nd" src="assets/logo.png" alt="Logo Nail Dreams" />
+          <div class="cmw-memory-carousel" role="region" aria-label="Memórias da Nail Dreams no Capital Moto Week 2026" tabindex="0">
+            <div class="cmw-memory-stack">
+              <figure class="cmw-memory-card">
+                <img src="assets/4.jpeg" alt="Atendimento de unhas no espaço Nail Dreams durante o Capital Moto Week 2026" />
+              </figure>
+              <figure class="cmw-memory-card">
+                <img src="assets/6.jpeg" alt="Celyne durante uma palestra no Capital Moto Week 2026" />
+              </figure>
+              <figure class="cmw-memory-card">
+                <img src="assets/5.jpeg" alt="Celyne com participantes no espaço Nail Dreams do Capital Moto Week 2026" />
+              </figure>
+              <figure class="cmw-memory-card">
+                <img src="assets/2.jpeg" alt="Participantes reunidos no stand Nail Dreams durante o Capital Moto Week 2026" />
+              </figure>
+              <figure class="cmw-memory-card">
+                <img src="assets/1.jpeg" alt="Celyne e participantes registrando um momento no stand Nail Dreams" />
+              </figure>
+              <figure class="cmw-memory-card">
+                <img src="assets/3.jpeg" alt="Produção temática fotografada no espaço Nail Dreams durante o evento" />
+              </figure>
+            </div>
+            <div class="cmw-memory-controls">
+              <button class="cmw-memory-button" type="button" data-cmw-previous aria-label="Ver foto anterior">←</button>
+              <span class="cmw-memory-status" aria-live="polite">1 de 6</span>
+              <button class="cmw-memory-button" type="button" data-cmw-next aria-label="Ver próxima foto">→</button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="cmw-talk-experience" aria-labelledby="cmw-talk-title">
+        <div class="cmw-talk-heading">
+          <span class="eyebrow">Um momento que ficou</span>
+          <h3 id="cmw-talk-title">Palestra de Celyne Mesquita</h3>
+          <p>Espaço Lady Bikers · Capital Moto Week 2026</p>
+        </div>
+
+        <video
+          class="cmw-talk-video"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Trecho de 10 segundos da palestra de Celyne Mesquita no Capital Moto Week 2026"
+        >
+          <source src="assets/palestra.mp4" type="video/mp4" />
+        </video>
+
+        <div class="cmw-story-intro">
+          <button class="cmw-story-preview" type="button" data-cmw-story-open aria-haspopup="dialog">
+            <span>Ainda estou tentando colocar em palavras o que foi viver esse momento. ❤️‍🔥</span>
+            <span>Subir naquele palco, no Espaço Lady Bikers, durante o Capital Moto Week, e poder falar para tantas mulheres sobre aquilo que eu acredito foi muito maior do que simplesmente fazer uma palestra.</span>
+            <span>Eu falei sobre unhas, autocuidado, liberdade e feminilidade. Mas, principalmente, falei sobre mulheres.</span>
+          </button>
+          <button class="cmw-story-read" type="button" data-cmw-story-open aria-haspopup="dialog">
+            Ler relato completo
+          </button>
+        </div>
+      </div>
+
+      <div class="cmw-actions cmw-actions-after-story">
+        <a class="btn ghost" href="https://www.instagram.com/naildreams.bsb/" target="_blank" rel="noopener">
+          Ver mais experiências no Instagram
+        </a>
       </div>
     </section>
 
@@ -373,8 +435,8 @@
           </p>
 
           <div class="contact-actions">
-            <a class="btn primary" href="cliente.html">
-              Chamar no WhatsApp
+            <a class="btn primary" href="https://wa.me/5561985879423?text=Ol%C3%A1%2C%20Nail%20Dreams%21%20Gostaria%20de%20falar%20com%20o%20Studio." target="_blank" rel="noopener">
+              Falar pelo WhatsApp
             </a>
             <a class="btn ghost" href="https://www.instagram.com/naildreams.bsb/" target="_blank" rel="noopener">
               @naildreams.bsb
@@ -400,40 +462,42 @@
     <a href="#topo">Voltar ao topo ↑</a>
   </footer>
 
-
-  <div class="campaign-popup" id="cmw-popup" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cmw-popup-title">
-    <div class="campaign-popup__overlay" data-cmw-close></div>
-
-    <article class="campaign-popup__card">
-      <button class="campaign-popup__close" type="button" aria-label="Fechar aviso" data-cmw-close>×</button>
-
-      <div class="campaign-popup__logos">
-        <img src="assets/logo.png" alt="Logo Nail Dreams" />
-        <span>+</span>
-        <img src="assets/capital-moto-week.webp" alt="Logo Capital Moto Week 2026" />
-      </div>
-
-      <span class="campaign-popup__label">Experiência especial</span>
-      <h2 id="cmw-popup-title">Nail Dreams no Capital Moto Week 2026</h2>
-      <p>
-        Unhas para quem vive em movimento. Beleza, atitude e uma experiência especial
-        no maior evento motociclístico da América Latina.
-      </p>
-
-      <div class="campaign-popup__actions">
-        <a class="btn primary" href="#capital-moto-week" data-cmw-close>Quero saber mais</a>
-        <a class="btn ghost" href="https://wa.me/5561985879423?text=Olá,%20Nail%20Dreams!%20Quero%20saber%20mais%20sobre%20a%20experiência%20no%20Capital%20Moto%20Week." target="_blank" rel="noopener">
-          Chamar no WhatsApp
-        </a>
-      </div>
-
-      <small>Você verá este aviso apenas uma vez por dia.</small>
-    </article>
-  </div>
-
   <div class="lightbox" aria-hidden="true" role="dialog" aria-label="Visualização de imagem">
     <button class="lightbox-close" type="button" aria-label="Fechar imagem">×</button>
     <img src="" alt="" />
+  </div>
+
+  <div class="cmw-story-modal" aria-hidden="true">
+    <div class="cmw-story-modal__overlay" data-cmw-story-close></div>
+    <article class="cmw-story-modal__card" role="dialog" aria-modal="true" aria-labelledby="cmw-story-modal-title" tabindex="-1">
+      <button class="cmw-story-modal__close" type="button" data-cmw-story-close aria-label="Fechar relato">×</button>
+      <span class="eyebrow">Relato de Celyne</span>
+      <h2 id="cmw-story-modal-title">Uma experiência transformadora</h2>
+      <div class="cmw-story-modal__content">
+        <p>Ainda estou tentando colocar em palavras o que foi viver esse momento. ❤️‍🔥</p>
+        <p>Subir naquele palco, no Espaço Lady Bikers, durante o Capital Moto Week, e poder falar para tantas mulheres sobre aquilo que eu acredito foi muito maior do que simplesmente fazer uma palestra.</p>
+        <p>Eu falei sobre unhas, autocuidado, liberdade e feminilidade. Mas, principalmente, falei sobre mulheres.</p>
+        <p>Mulheres que já sabem da própria força. Mulheres que empreendem, que sonham, que enfrentam desafios e que, muitas vezes, precisam continuar mesmo quando ninguém está vendo.</p>
+        <p>E eu também falei sobre empreendedorismo. Sobre uma coisa que aprendi na prática: a gente não pode ficar esperando as coisas acontecerem magicamente.</p>
+        <p>Sonho sem direção vira apenas vontade.</p>
+        <p>É preciso ter objetivos claros, saber onde queremos chegar e, principalmente, correr atrás. Fazer acontecer. Errar, ajustar a rota, tentar de novo e continuar caminhando.</p>
+        <p>Foi muito especial perceber, durante a palestra, mulheres olhando para mim com os olhos brilhando. Mulheres se identificando com as minhas falas, com as minhas experiências e, talvez, encontrando em alguma parte da minha história um pouco da própria história delas.</p>
+        <p>E foi aí que eu entendi que aquela palestra também era sobre mim.</p>
+        <p>Sobre tudo o que eu vivi para chegar até ali.</p>
+        <p>Sobre o Nail Dreams, sobre os desafios, as escolhas, os medos, os acertos e todos os momentos em que eu precisei acreditar antes de ter qualquer certeza.</p>
+        <p>Poder compartilhar isso com outras mulheres empreendedoras foi uma experiência deliciosa, emocionante e, acima de tudo, transformadora.</p>
+        <p>Eu saí daquele palco diferente de como entrei.</p>
+        <p>Porque existe um tipo de crescimento profissional que nenhum curso, nenhum certificado e nenhum número consegue medir: o crescimento que acontece quando você percebe que aquilo que você viveu pode tocar, inspirar e movimentar a vida de outra pessoa.</p>
+        <p>Naquele momento, eu não era apenas a dona e idealizadora do Nail Dreams.</p>
+        <p>Eu era uma mulher contando para outras mulheres que é possível construir, recomeçar, sonhar grande e fazer acontecer.</p>
+        <p>E ver os olhos delas brilhando enquanto eu falava… isso eu vou guardar para sempre.</p>
+        <p>Obrigada a cada mulher que me ouviu, que se identificou, que sorriu, que participou e que me permitiu compartilhar um pedacinho da minha história.</p>
+        <p>Talvez eu tenha subido naquele palco para falar.</p>
+        <p>Mas, sem dúvida nenhuma, eu também saí de lá tendo aprendido muito.</p>
+        <p>E que experiência maravilhosa foi essa. ✨</p>
+        <p>Que venham os próximos palcos.<br />Porque agora eu sei que essa voz tem muito mais para dizer.</p>
+      </div>
+    </article>
   </div>
 
   <script type="module" src="./js/site.js"></script>
