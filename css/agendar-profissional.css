@@ -25,6 +25,9 @@ h1, h2, p { margin-top: 0; }
 .booking-brand > span:last-child { display: flex; flex-direction: column; }
 .booking-brand small { margin-top: .08rem; color: rgba(255, 255, 255, .76); }
 .brand-logo { display: block; width: 60px; height: 60px; padding: 2.5px; border-radius: 50%; background: #fff; object-fit: contain; }
+.header-links { display: flex; align-items: center; gap: 1rem; }
+.site-link { padding: .48rem .7rem; border: 1px solid rgba(255,255,255,.42); border-radius: 9px; color: #fff; font-size: .86rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.site-link:hover { background: rgba(255,255,255,.12); }
 .back-link { color: #fff; font-weight: 700; text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
 
@@ -52,5 +55,7 @@ h1, h2, p { margin-top: 0; }
 
 @media (max-width: 580px) {
   .booking-main { margin-top: 1.5rem; }
+  .header-links { align-items: flex-end; flex-direction: column-reverse; gap: .35rem; }
+  .site-link { padding: .3rem .5rem; font-size: .76rem; }
   .back-link { max-width: 120px; font-size: .85rem; text-align: right; }
 }

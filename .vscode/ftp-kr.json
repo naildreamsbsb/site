@@ -1,0 +1,16 @@
+{
+    "host": "naildreams.com.br",
+    "username": "naildreams1",
+    "password": "Nails07032026@",
+    "remotePath": "/public_html",
+    "protocol": "ftp",
+    "port": 21,
+    "fileNameEncoding": "utf8",
+    "autoUpload": true,
+    "autoDelete": false,
+    "autoDownload": false,
+    "ignore": [
+        ".git",
+        "/.vscode"
+    ]
+}

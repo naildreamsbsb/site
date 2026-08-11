@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#a94f72">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Nail Dreams">
   <title>Login administrativo | Nail Dreams</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon-180.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="login-page">
@@ -35,11 +41,13 @@
       <button id="forgot-password-button" class="text-button" type="button">Esqueci minha senha</button>
     </form>
     <p id="login-message" class="message" role="alert" aria-live="polite"></p>
+    <a class="back-link" href="index.html">Voltar ao site Nail Dreams</a>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

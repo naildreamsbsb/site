@@ -21,6 +21,7 @@
       </a>
       <div class="user-area">
         <span id="professional-name">Profissional</span>
+        <a class="site-link" href="index.html">Site <span>Nail Dreams</span></a>
         <button id="logout-button" class="button-secondary" type="button">Sair</button>
       </div>
     </header>
@@ -28,7 +29,7 @@
     <div class="workspace">
       <nav class="sidebar" aria-label="Navegação principal">
         <button class="nav-item is-active" type="button" data-section="dashboard" aria-current="page"><span aria-hidden="true">⌂</span>Dashboard</button>
-        <button class="nav-item" type="button" data-section="agenda"><span aria-hidden="true">▣</span>Minha agenda<small>Em breve</small></button>
+        <button class="nav-item" type="button" data-section="agenda"><span aria-hidden="true">▣</span>Minha agenda</button>
         <button class="nav-item" type="button" data-section="solicitacoes"><span aria-hidden="true">♡</span>Solicitações<small>Em breve</small></button>
         <button class="nav-item" type="button" data-section="contrato"><span aria-hidden="true">◇</span>Meu contrato</button>
         <button class="nav-item" type="button" data-section="producao"><span aria-hidden="true">↗</span>Produção<small>Em breve</small></button>
@@ -48,6 +49,11 @@
             <article class="summary-card"><span>Já recebido</span><strong>—</strong><small>Em breve</small></article>
             <article class="summary-card"><span>Saldo disponível</span><strong>—</strong><small>Em breve</small></article>
           </div>
+        </section>
+
+        <section id="section-agenda" class="panel-section" hidden aria-labelledby="agenda-title">
+          <div class="section-heading"><div><p class="eyebrow">Minha agenda</p><h1 id="agenda-title">Próximos atendimentos</h1><p>Confira seus atendimentos previstos para os próximos 30 dias.</p></div></div>
+          <div id="agenda-container" aria-live="polite"><article class="state-card">Carregando sua agenda...</article></div>
         </section>
 
         <section id="section-contrato" class="panel-section" hidden aria-labelledby="contract-title">

@@ -77,6 +77,88 @@ function createDetail(label, value) {
   return wrapper;
 }
 
+function localDateValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function agendaStatusLabel(status) {
+  const labels = {
+    solicitado: "Solicitado",
+    confirmado: "Confirmado",
+    concluido: "Concluído",
+    cancelado: "Cancelado"
+  };
+  return labels[status] || displayValue(status).replaceAll("_", " ");
+}
+
+function renderAgenda(items) {
+  const container = $("#agenda-container");
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("article");
+    empty.className = "state-card";
+    empty.textContent = "Nenhum atendimento encontrado para o período.";
+    container.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "agenda-list";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "agenda-card";
+    const heading = document.createElement("header");
+    const date = document.createElement("strong");
+    date.textContent = displayValue(item.dataBr);
+    const time = document.createElement("span");
+    time.textContent = `${displayValue(item.horaInicio)} - ${displayValue(item.horaFim)}`;
+    heading.append(date, time);
+
+    const details = document.createElement("dl");
+    details.className = "agenda-details";
+    details.append(
+      createDetail("Cliente", displayValue(item.clienteNome)),
+      createDetail("Serviço", displayValue(item.servicoNome)),
+      createDetail("Status", agendaStatusLabel(item.status))
+    );
+    card.append(heading, details);
+    list.appendChild(card);
+  });
+  container.appendChild(list);
+}
+
+async function carregarMinhaAgenda(authenticatedUser) {
+  const container = $("#agenda-container");
+  if (!authenticatedUser) {
+    container.innerHTML = '<article class="state-card">Faça login novamente para consultar sua agenda.</article>';
+    return;
+  }
+
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 30);
+  try {
+    const { data, error } = await supabaseClient.rpc("listar_agenda_profissional", {
+      p_data_inicio: localDateValue(startDate),
+      p_data_fim: localDateValue(endDate)
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.success) throw new Error(result?.message || "Não foi possível carregar sua agenda.");
+    renderAgenda(Array.isArray(result.items) ? result.items : []);
+  } catch (error) {
+    console.error("Erro ao carregar agenda profissional:", error);
+    container.replaceChildren();
+    const state = document.createElement("article");
+    state.className = "state-card";
+    state.textContent = errorMessage(error, "Não foi possível carregar sua agenda. Tente novamente.");
+    container.appendChild(state);
+  }
+}
+
 function renderContract() {
   const container = $("#contract-container");
   container.replaceChildren();
@@ -248,7 +330,7 @@ function showSection(section) {
     producao: "Produção",
     comissoes: "Comissões"
   };
-  const target = section === "dashboard" ? "dashboard" : section === "contrato" ? "contrato" : "coming-soon";
+  const target = section === "dashboard" || section === "agenda" || section === "contrato" ? section : "coming-soon";
   document.querySelectorAll(".panel-section").forEach((element) => {
     const active = element.id === `section-${target}`;
     element.hidden = !active;
@@ -292,7 +374,7 @@ async function initialize() {
     const name = professionalName(profile, professional, session.user);
     $("#professional-name").textContent = name;
     $("#first-name").textContent = name.trim().split(/\s+/)[0];
-    await loadContract();
+    await Promise.all([loadContract(), carregarMinhaAgenda(session.user)]);
     $("#page-loading").hidden = true;
     $("#professional-app").hidden = false;
   } catch (error) {

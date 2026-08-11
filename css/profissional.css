@@ -41,6 +41,8 @@ h1, h2, p { margin-top: 0; }
 .brand small { margin-top: .15rem; color: var(--muted); font-size: .75rem; }
 .user-area { display: flex; align-items: center; gap: .8rem; }
 .user-area > span { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; font-weight: 750; }
+.site-link { padding: .6rem .75rem; border-radius: 10px; color: var(--primary-dark); font-size: .8rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.site-link:hover { background: var(--primary-soft); }
 .button-secondary { color: var(--primary-dark); background: var(--primary-soft); }
 .button-secondary:hover:not(:disabled) { color: #fff; }
 
@@ -85,6 +87,15 @@ h1, h2, p { margin-top: 0; }
 .state-card { padding: 2rem; color: var(--muted); text-align: center; }
 .state-card strong { display: block; margin-bottom: .4rem; color: var(--text); font-size: 1.1rem; }
 .state-card p { margin-bottom: 0; }
+.agenda-list { display: grid; gap: 1rem; }
+.agenda-card { overflow: hidden; border: 1px solid var(--border); border-radius: 19px; background: var(--surface); box-shadow: 0 10px 28px rgba(77,39,54,.055); }
+.agenda-card > header { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.agenda-card > header strong { color: var(--primary-dark); font-family: Georgia, serif; font-size: 1.15rem; }
+.agenda-card > header span { font-size: .9rem; font-weight: 800; white-space: nowrap; }
+.agenda-details { display: grid; grid-template-columns: 1.4fr 1.4fr 1fr; margin: 0; padding: .2rem 1.2rem; }
+.agenda-details > div { min-width: 0; padding: .9rem .8rem .9rem 0; }
+.agenda-details dt { color: var(--muted); font-size: .72rem; font-weight: 700; }
+.agenda-details dd { margin: .25rem 0 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 750; text-transform: capitalize; }
 .message { display: none; margin: 0 0 1rem; padding: .85rem 1rem; border-radius: 12px; font-size: .88rem; }
 .message:not(:empty) { display: block; }
 .message.success { color: var(--success); background: var(--success-soft); }
@@ -123,6 +134,7 @@ h1, h2, p { margin-top: 0; }
   .brand img { width: 46px; height: 46px; }
   .brand small { display: none; }
   .user-area > span { display: none; }
+  .site-link span { display: none; }
   .user-area button { padding: .65rem .85rem; }
   .content { padding: 1.2rem 1rem 2.5rem; }
   .welcome-card { border-radius: 20px; }
@@ -134,10 +146,14 @@ h1, h2, p { margin-top: 0; }
   .contract-details > div { padding-right: .5rem; }
   .contract-actions, .modal-actions { flex-direction: column-reverse; }
   .contract-actions button, .modal-actions button { width: 100%; }
+  .agenda-details { grid-template-columns: 1fr; }
+  .agenda-details > div { padding: .75rem 0; border-bottom: 1px solid var(--border); }
+  .agenda-details > div:last-child { border-bottom: 0; }
   .modal-overlay { align-items: end; padding: .5rem; }
   .modal { max-height: calc(100vh - 1rem); border-radius: 22px 22px 14px 14px; }
 }
 
 @media (max-width: 390px) {
   .summary-grid, .contract-details { grid-template-columns: 1fr; }
+  .agenda-card > header { align-items: flex-start; flex-direction: column; }
 }

@@ -121,7 +121,7 @@ async function loginWithGoogle() {
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/cliente.html`
+      redirectTo: new URL("cliente.html", window.location.href).href
     }
   });
 
