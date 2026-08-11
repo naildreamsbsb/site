@@ -1,12 +1,6 @@
 const CLIENT_ROLE = "cliente";
 const TEMP_BOOKING_KEY = "agendamento_temp";
 const SLOT_INTERVAL_MINUTES = 30;
-const CLOSED_APPOINTMENT_STATUSES = new Set([
-  "cancelado_cliente",
-  "cancelado_studio",
-  "nao_compareceu",
-  "expirado"
-]);
 
 const dateInput = document.querySelector("#booking-date");
 const timesContainer = document.querySelector("#available-times");
@@ -14,7 +8,6 @@ const timesLoading = document.querySelector("#times-loading");
 const bookingMessage = document.querySelector("#booking-message");
 
 let temporaryBooking = null;
-let currentClient = null;
 
 function showMessage(text = "") {
   bookingMessage.textContent = text;
@@ -43,36 +36,8 @@ function addMinutes(date, minutes) {
   return new Date(date.getTime() + minutes * 60000);
 }
 
-function timeLabel(date) {
-  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
-
 function timeValue(date) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
-function intervalsOverlap(startA, endA, startB, endB) {
-  return startA < endB && endA > startB;
-}
-
-function weekdayMatches(value, selectedDate) {
-  const weekday = new Date(`${selectedDate}T12:00:00`).getDay();
-  const numericValue = Number(value);
-  if (Number.isInteger(numericValue)) return numericValue === weekday;
-
-  const weekdayNames = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
-  const normalizedValue = String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  return normalizedValue.startsWith(weekdayNames[weekday]);
-}
-
-function selectedDayLimits(selectedDate) {
-  return {
-    start: new Date(`${selectedDate}T00:00:00`),
-    end: new Date(`${selectedDate}T23:59:59.999`)
-  };
 }
 
 async function requireClientContext() {
@@ -101,90 +66,39 @@ async function requireClientContext() {
 }
 
 async function fetchDayAvailability(selectedDate) {
-  const limits = selectedDayLimits(selectedDate);
-  const professionalId = temporaryBooking.profissional_id;
-
-  const [workResult, blocksResult, appointmentsResult] = await Promise.all([
-    supabaseClient
-      .from("horarios_trabalho")
-      .select("profissional_id, weekday, start_time, end_time, active")
-      .eq("profissional_id", professionalId)
-      .eq("active", true),
-    supabaseClient
-      .from("bloqueios_agenda")
-      .select("profissional_id, start_at, end_at, active")
-      .eq("profissional_id", professionalId)
-      .eq("active", true)
-      .lt("start_at", limits.end.toISOString())
-      .gt("end_at", limits.start.toISOString()),
-    supabaseClient
-      .from("agendamentos")
-      .select("profissional_id, cliente_id, start_at, end_at, status")
-      .or(`profissional_id.eq.${professionalId},cliente_id.eq.${currentClient.id}`)
-      .lt("start_at", limits.end.toISOString())
-      .gt("end_at", limits.start.toISOString())
-  ]);
-
-  if (workResult.error) throw workResult.error;
-  if (blocksResult.error) throw blocksResult.error;
-  if (appointmentsResult.error) throw appointmentsResult.error;
-
-  return {
-    schedules: (workResult.data || []).filter((item) => weekdayMatches(item.weekday, selectedDate)),
-    blocks: blocksResult.data || [],
-    appointments: (appointmentsResult.data || []).filter(
-      (item) => !CLOSED_APPOINTMENT_STATUSES.has(item.status)
-    )
-  };
-}
-
-function generateAvailableSlots(selectedDate, schedules, blocks, appointments) {
-  const duration = Number(temporaryBooking.duracao_minutos);
-  if (!Number.isFinite(duration) || duration <= 0) {
-    throw new Error("A duração do serviço selecionado é inválida.");
-  }
-
-  const now = new Date();
-  const slots = new Map();
-
-  schedules.forEach((schedule) => {
-    const workStart = localDateTime(selectedDate, schedule.start_time);
-    const workEnd = localDateTime(selectedDate, schedule.end_time);
-
-    for (let slotStart = workStart; addMinutes(slotStart, duration) <= workEnd; slotStart = addMinutes(slotStart, SLOT_INTERVAL_MINUTES)) {
-      const slotEnd = addMinutes(slotStart, duration);
-      if (slotStart <= now) continue;
-
-      const blocked = blocks.some((block) => intervalsOverlap(
-        slotStart,
-        slotEnd,
-        new Date(block.start_at),
-        new Date(block.end_at)
-      ));
-      if (blocked) continue;
-
-      const occupied = appointments.some((appointment) => intervalsOverlap(
-        slotStart,
-        slotEnd,
-        new Date(appointment.start_at),
-        new Date(appointment.end_at)
-      ));
-      if (occupied) continue;
-
-      slots.set(slotStart.getTime(), { start: slotStart, end: slotEnd });
-    }
+  const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis", {
+    p_profissional_id: temporaryBooking.profissional_id,
+    p_servico_id: temporaryBooking.servico_id,
+    p_data: selectedDate,
+    p_intervalo_minutos: SLOT_INTERVAL_MINUTES
   });
 
-  return [...slots.values()].sort((a, b) => a.start - b.start);
+  if (error) throw error;
+  return data || [];
 }
 
-function chooseTime(selectedDate, slot, button) {
+function normalizeAvailableTime(item) {
+  const rawTime = typeof item === "string"
+    ? item
+    : item?.horario ?? item?.hora ?? item?.start_time ?? item?.horaInicio ?? item?.startAt;
+  const match = String(rawTime || "").match(/(?:T|^)(\d{2}:\d{2})/);
+  return match ? match[1] : null;
+}
+
+function chooseTime(selectedDate, selectedTime, button) {
+  const duration = Number(temporaryBooking.duracao_minutos);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    showMessage("A duração do serviço selecionado é inválida.");
+    return;
+  }
+
   button.disabled = true;
+  const end = addMinutes(localDateTime(selectedDate, selectedTime), duration);
   const updatedBooking = {
     ...temporaryBooking,
     data: selectedDate,
-    hora_inicio: timeValue(slot.start),
-    hora_fim: timeValue(slot.end)
+    hora_inicio: selectedTime,
+    hora_fim: timeValue(end)
   };
 
   try {
@@ -197,21 +111,22 @@ function chooseTime(selectedDate, slot, button) {
   }
 }
 
-function renderSlots(selectedDate, slots) {
+function renderSlots(selectedDate, items) {
   timesContainer.replaceChildren();
+  const times = (items || []).map(normalizeAvailableTime).filter(Boolean);
 
-  if (!slots.length) {
+  if (!times.length) {
     const emptyState = document.createElement("p");
     emptyState.className = "empty-state";
     emptyState.textContent = "Não há horários disponíveis para esta data.";
     timesContainer.appendChild(emptyState);
   } else {
-    slots.forEach((slot) => {
+    times.forEach((time) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "time-button";
-      button.textContent = timeLabel(slot.start);
-      button.addEventListener("click", () => chooseTime(selectedDate, slot, button));
+      button.textContent = time;
+      button.addEventListener("click", () => chooseTime(selectedDate, time, button));
       timesContainer.appendChild(button);
     });
   }
@@ -227,13 +142,7 @@ async function handleDateChange() {
 
   try {
     const availability = await fetchDayAvailability(selectedDate);
-    const slots = generateAvailableSlots(
-      selectedDate,
-      availability.schedules,
-      availability.blocks,
-      availability.appointments
-    );
-    renderSlots(selectedDate, slots);
+    renderSlots(selectedDate, availability);
   } catch (error) {
     console.error("Erro ao consultar horários:", error);
     showMessage(readableError(error, "Não foi possível consultar os horários disponíveis."));
@@ -258,7 +167,6 @@ async function initializeScheduleSelection() {
   try {
     const context = await requireClientContext();
     if (!context) return;
-    currentClient = context.client;
     dateInput.addEventListener("change", handleDateChange);
   } catch (error) {
     console.error("Erro ao iniciar a seleção de horário:", error);
