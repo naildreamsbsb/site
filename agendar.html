@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Escolha o serviço | Nail Dreams</title>
-  <link rel="stylesheet" href="css/agendar.css?v=1">
+  <link rel="stylesheet" href="css/agendar.css?v=2">
+  <link rel="stylesheet" href="css/theme.css?v=2">
+  <script src="js/theme.js?v=1"></script>
 </head>
 <body class="booking-page">
   <header class="booking-header">
@@ -24,6 +26,12 @@
 
     <p id="booking-message" class="message" role="alert" aria-live="polite"></p>
 
+    <div class="service-category-tabs" role="group" aria-label="Categorias de serviços">
+      <button class="is-active" type="button" data-service-category="unhas" aria-pressed="true">Unhas</button>
+      <button type="button" data-service-category="olhos" aria-pressed="false">Olhos</button>
+      <button type="button" data-service-category="corpo" aria-pressed="false">Corpo</button>
+    </div>
+
     <section id="services-loading" class="loading-card" aria-live="polite">
       <span class="loading-mark" aria-hidden="true"></span>
       <p>Carregando serviços disponíveis...</p>
@@ -35,6 +43,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
-  <script src="js/agendar.js?v=1"></script>
+  <script src="js/agendar.js?v=2"></script>
 </body>
 </html>

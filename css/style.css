@@ -79,6 +79,29 @@ h1, h2, h3, p { margin-top: 0; }
 .app-toast button:hover:not(:disabled) { background: transparent; opacity: 1; }
 @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+.working-hours-toolbar { display: grid; max-width: 420px; margin-bottom: 1rem; }
+.working-hours-toolbar label, .working-time-field { display: grid; gap: .4rem; color: var(--muted); font-size: .78rem; font-weight: 750; }
+.working-hours-content { min-width: 0; }
+.working-hours-week { display: grid; gap: .7rem; }
+.working-day-card { overflow: hidden; border: 1px solid var(--border); border-radius: 15px; background: #fff; box-shadow: 0 7px 20px rgba(60, 37, 47, .05); }
+.working-day-card > header { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem .9rem; }
+.working-day-card.is-open > header { border-bottom: 1px solid var(--border); background: #fff8fa; }
+.working-day-card h3 { margin: 0 0 .15rem; font-size: .98rem; }
+.working-day-card header p { margin: 0; color: var(--muted); font-size: .72rem; }
+.working-day-toggle { display: flex; min-height: 40px; align-items: center; gap: .5rem; padding: .45rem .65rem; border-radius: 999px; color: var(--muted); background: #f2edef; cursor: pointer; font-size: .76rem; font-weight: 800; white-space: nowrap; }
+.working-day-toggle:has(input:checked) { color: #287a52; background: #e7f5ed; }
+.working-day-toggle input { width: 18px; height: 18px; margin: 0; accent-color: #287a52; }
+.working-periods { display: grid; gap: .6rem; padding: .8rem .9rem .6rem; }
+.working-period { display: grid; grid-template-columns: minmax(100px, 1fr) auto minmax(100px, 1fr) auto; align-items: end; gap: .55rem; padding: .7rem; border: 1px solid var(--border); border-radius: 12px; }
+.working-time-field input { width: 100%; min-height: 42px; }
+.working-time-field input.invalid { border-color: var(--error); background: #fff2f3; }
+.working-time-separator { align-self: center; padding-top: 1.15rem; color: var(--muted); font-size: .8rem; }
+.working-period-remove { min-height: 42px; padding: .65rem .75rem; color: var(--error); background: #fff0f1; font-size: .74rem; }
+.working-period-remove:hover:not(:disabled) { color: #fff; background: var(--error); }
+.working-period-add { width: calc(100% - 1.8rem); min-height: 42px; margin: 0 .9rem .9rem; border: 1px dashed #d9b5c3; color: var(--primary-dark); background: #fff; }
+.working-hours-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.working-hours-actions button { min-width: 190px; }
+
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem max(1rem, calc((100% - 1180px) / 2)); border-bottom: 1px solid var(--border); background: var(--surface); }
 .topbar > div:first-child { display: flex; flex-direction: column; }
 .topbar span { color: var(--muted); font-size: .9rem; }
@@ -290,6 +313,9 @@ h1, h2, h3, p { margin-top: 0; }
   .commissions-filter-actions { flex-direction: column; }
   .commissions-filter-actions button { width: 100%; }
   .app-toast { top: auto; right: 50%; bottom: 1rem; width: min(92vw, 390px); transform: translateX(50%); animation: toast-in-mobile .18s ease-out; }
+  .working-period { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .working-period-remove { grid-column: 1 / -1; width: 100%; }
+  .working-hours-actions button { width: 100%; }
 }
 
 @keyframes toast-in-mobile { from { transform: translate(50%, 8px); opacity: 0; } to { transform: translate(50%, 0); opacity: 1; } }

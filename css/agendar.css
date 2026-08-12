@@ -54,6 +54,10 @@ h1, h2, p { margin-top: 0; }
 .message { display: none; margin: 0 0 1.2rem; padding: .85rem 1rem; border-radius: 9px; }
 .message:not(:empty) { display: block; }
 .message.error { color: var(--error); background: #fdebed; }
+.service-category-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; margin: 0 0 1.25rem; padding: .3rem; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+.service-category-tabs button { min-height: 46px; padding: .65rem .5rem; color: var(--muted); background: transparent; }
+.service-category-tabs button:hover:not(:disabled) { color: var(--primary-dark); background: #f7e9ee; }
+.service-category-tabs button.is-active { color: #fff; background: var(--primary); box-shadow: 0 5px 15px rgba(169,79,114,.2); }
 
 @media (max-width: 580px) {
   .booking-main { margin-top: 1.5rem; }

@@ -141,12 +141,12 @@ async function logout() {
   showOnly(loginSection);
 }
 
-function showComingSoon() {
-  showMessage("Esta funcionalidade será disponibilizada na próxima etapa.", "info");
-}
-
 function startBooking() {
   window.location.assign("agendar.html");
+}
+
+function showAppointments() {
+  window.location.assign("meus-agendamentos.html");
 }
 
 async function initializeClientArea() {
@@ -171,6 +171,6 @@ document.querySelector("#google-login-button").addEventListener("click", loginWi
 document.querySelector("#logout-button").addEventListener("click", logout);
 document.querySelector("#denied-logout-button").addEventListener("click", logout);
 document.querySelector("#schedule-button").addEventListener("click", startBooking);
-document.querySelector("#appointments-button").addEventListener("click", showComingSoon);
+document.querySelector("#appointments-button").addEventListener("click", showAppointments);
 
 initializeClientArea();

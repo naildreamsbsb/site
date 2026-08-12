@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel administrativo | Nail Dreams</title>
-  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/theme.css?v=2">
+  <script src="js/theme.js?v=1"></script>
 </head>
 <body class="admin-page">
   <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
@@ -18,6 +20,7 @@
       <button class="sidebar-link" type="button" data-section="new-appointment"><span>＋</span> Novo agendamento</button>
       <button class="sidebar-link" type="button" data-section="clients"><span>👤</span> Clientes</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="professionals" hidden><span>✦</span> Profissionais</button>
+      <button class="sidebar-link admin-only-navigation" type="button" data-section="working-hours" hidden><span>◷</span> Horários</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="contracts" hidden><span>▤</span> Contratos</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="services" hidden><span>♡</span> Serviços</button>
       <button class="sidebar-link admin-only-navigation" type="button" data-section="settings" hidden><span>⚙</span> Configurações</button>
@@ -76,6 +79,24 @@
         <button id="new-professional-button" type="button">Nova profissional</button>
       </div>
       <div id="professionals-content"></div>
+    </section>
+
+    <section id="section-working-hours" class="panel app-section">
+      <div class="section-heading">
+        <div><h2>Horários das profissionais</h2><p>Configure os dias e períodos de atendimento de cada profissional.</p></div>
+      </div>
+      <div class="working-hours-toolbar">
+        <label>Profissional
+          <select id="working-hours-professional"><option value="">Selecione uma profissional</option></select>
+        </label>
+      </div>
+      <p id="working-hours-message" class="message" role="status" aria-live="polite"></p>
+      <div id="working-hours-content" class="working-hours-content">
+        <div class="empty-state">Selecione uma profissional para visualizar os horários.</div>
+      </div>
+      <div class="working-hours-actions">
+        <button id="save-working-hours-button" type="button" disabled>Salvar horários</button>
+      </div>
     </section>
 
     <section id="section-contracts" class="panel app-section">
@@ -443,6 +464,6 @@
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
   <script src="js/auth.js?v=1"></script>
-  <script src="js/admin.js?v=1"></script>
+  <script src="js/admin.js?v=3"></script>
 </body>
 </html>

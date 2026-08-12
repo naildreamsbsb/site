@@ -1,10 +1,16 @@
 const CLIENT_ROLE = "cliente";
 const TEMP_BOOKING_KEY = "agendamento_temp";
-const CATEGORY_ORDER = ["Unhas", "Quiropraxia", "Sobrancelha", "Cílios"];
+const VISUAL_CATEGORIES = {
+  unhas: "Unhas",
+  olhos: "Olhos",
+  corpo: "Corpo"
+};
 
 const servicesLoading = document.querySelector("#services-loading");
 const servicesContent = document.querySelector("#services-content");
 const bookingMessage = document.querySelector("#booking-message");
+let servicesCatalog = [];
+let selectedVisualCategory = "unhas";
 
 function showMessage(text = "") {
   bookingMessage.textContent = text;
@@ -24,6 +30,18 @@ function formatPrice(value) {
 
 function categoryName(service) {
   return service.category?.trim() || "Outros serviços";
+}
+
+function normalizeCategoryText(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function visualCategory(service) {
+  const category = normalizeCategoryText(service?.category);
+  const name = normalizeCategoryText(service?.name);
+  if (/cilio|sobrancelha|lash|brow|olho|volume|fox eyes/.test(`${category} ${name}`)) return "olhos";
+  if (/quiroprax|massag|massoter|limpeza de pele|ventosa|acupunt|corpo|bem-estar|estetica/.test(`${category} ${name}`)) return "corpo";
+  return "unhas";
 }
 
 async function requireClientSession() {
@@ -111,8 +129,9 @@ function createServiceCard(service) {
   return card;
 }
 
-function renderServices(services) {
+function renderServices() {
   servicesContent.replaceChildren();
+  const services = servicesCatalog.filter((service) => visualCategory(service) === selectedVisualCategory);
 
   if (!services.length) {
     const emptyState = document.createElement("p");
@@ -120,36 +139,15 @@ function renderServices(services) {
     emptyState.textContent = "Nenhum serviço está disponível no momento.";
     servicesContent.appendChild(emptyState);
   } else {
-    const groups = new Map();
-
-    services.forEach((service) => {
-      const category = categoryName(service);
-      if (!groups.has(category)) groups.set(category, []);
-      groups.get(category).push(service);
-    });
-
-    const orderedGroups = [...groups.entries()].sort(([categoryA], [categoryB]) => {
-      const positionA = CATEGORY_ORDER.indexOf(categoryA);
-      const positionB = CATEGORY_ORDER.indexOf(categoryB);
-      const orderA = positionA === -1 ? CATEGORY_ORDER.length : positionA;
-      const orderB = positionB === -1 ? CATEGORY_ORDER.length : positionB;
-      return orderA - orderB;
-    });
-
-    orderedGroups.forEach(([category, categoryServices]) => {
-      const group = document.createElement("section");
-      group.className = "service-group";
-
-      const heading = document.createElement("h2");
-      heading.textContent = category;
-
-      const grid = document.createElement("div");
-      grid.className = "service-grid";
-      categoryServices.forEach((service) => grid.appendChild(createServiceCard(service)));
-
-      group.append(heading, grid);
-      servicesContent.appendChild(group);
-    });
+    const group = document.createElement("section");
+    group.className = "service-group";
+    const heading = document.createElement("h2");
+    heading.textContent = VISUAL_CATEGORIES[selectedVisualCategory];
+    const grid = document.createElement("div");
+    grid.className = "service-grid";
+    services.forEach((service) => grid.appendChild(createServiceCard(service)));
+    group.append(heading, grid);
+    servicesContent.appendChild(group);
   }
 
   servicesLoading.hidden = true;
@@ -165,7 +163,19 @@ async function loadServices() {
     .order("name");
 
   if (error) throw error;
-  renderServices(data || []);
+  servicesCatalog = data || [];
+  renderServices();
+}
+
+function selectVisualCategory(category) {
+  if (!VISUAL_CATEGORIES[category] || category === selectedVisualCategory) return;
+  selectedVisualCategory = category;
+  document.querySelectorAll("[data-service-category]").forEach((button) => {
+    const active = button.dataset.serviceCategory === category;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  renderServices();
 }
 
 async function initializeBooking() {
@@ -179,5 +189,9 @@ async function initializeBooking() {
     showMessage(readableError(error, "Não foi possível carregar os serviços."));
   }
 }
+
+document.querySelectorAll("[data-service-category]").forEach((button) => {
+  button.addEventListener("click", () => selectVisualCategory(button.dataset.serviceCategory));
+});
 
 initializeBooking();

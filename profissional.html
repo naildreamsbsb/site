@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#a94f72">
   <title>Painel da profissional | Nail Dreams</title>
-  <link rel="stylesheet" href="css/profissional.css?v=1">
+  <link rel="stylesheet" href="css/profissional.css?v=7">
+  <link rel="stylesheet" href="css/theme.css?v=2">
+  <script src="js/theme.js?v=1"></script>
 </head>
 <body>
   <div id="page-loading" class="page-loading" role="status" aria-live="polite">
@@ -30,6 +32,7 @@
       <nav class="sidebar" aria-label="Navegação principal">
         <button class="nav-item is-active" type="button" data-section="dashboard" aria-current="page"><span aria-hidden="true">⌂</span>Dashboard</button>
         <button class="nav-item" type="button" data-section="agenda"><span aria-hidden="true">▣</span>Minha agenda</button>
+        <button class="nav-item" type="button" data-section="horarios"><span aria-hidden="true">◷</span>Meus horários</button>
         <button class="nav-item" type="button" data-section="solicitacoes"><span aria-hidden="true">♡</span>Solicitações<small>Em breve</small></button>
         <button class="nav-item" type="button" data-section="contrato"><span aria-hidden="true">◇</span>Meu contrato</button>
         <button class="nav-item" type="button" data-section="producao"><span aria-hidden="true">↗</span>Produção<small>Em breve</small></button>
@@ -52,8 +55,23 @@
         </section>
 
         <section id="section-agenda" class="panel-section" hidden aria-labelledby="agenda-title">
-          <div class="section-heading"><div><p class="eyebrow">Minha agenda</p><h1 id="agenda-title">Próximos atendimentos</h1><p>Confira seus atendimentos previstos para os próximos 30 dias.</p></div></div>
+          <div class="section-heading agenda-heading"><div><p class="eyebrow">Minha agenda</p><h1 id="agenda-title">Atendimentos</h1><p>Consulte seus próximos compromissos e navegue pela agenda detalhada.</p></div></div>
+          <div class="agenda-view-switch" role="group" aria-label="Visualização da agenda"><button class="is-active" type="button" data-agenda-view="day" aria-pressed="true">Dia</button><button type="button" data-agenda-view="week" aria-pressed="false">Semana</button></div>
+          <div class="agenda-navigation"><button id="agenda-previous" class="agenda-nav-button" type="button" aria-label="Período anterior">‹</button><strong id="agenda-period-label"></strong><button id="agenda-next" class="agenda-nav-button" type="button" aria-label="Próximo período">›</button><button id="agenda-today" class="agenda-today-button" type="button">Hoje</button></div>
           <div id="agenda-container" aria-live="polite"><article class="state-card">Carregando sua agenda...</article></div>
+          <section class="upcoming-section" aria-labelledby="upcoming-title">
+            <div class="upcoming-heading"><div><p class="eyebrow">Em breve</p><h2 id="upcoming-title">Próximos atendimentos</h2></div></div>
+            <div id="upcoming-appointments" aria-live="polite"><article class="state-card">Carregando próximos atendimentos...</article></div>
+          </section>
+        </section>
+
+        <section id="section-horarios" class="panel-section" hidden aria-labelledby="working-hours-title">
+          <div class="section-heading"><div><p class="eyebrow">Minha disponibilidade</p><h1 id="working-hours-title">Meus horários de atendimento</h1><p>Defina os dias e períodos em que você atende no Studio.</p></div></div>
+          <p id="working-hours-message" class="message" role="status" aria-live="polite"></p>
+          <div id="working-hours-container" aria-live="polite"><article class="state-card">Carregando seus horários...</article></div>
+          <div class="working-hours-actions">
+            <button id="save-working-hours" type="button" disabled>Salvar horários</button>
+          </div>
         </section>
 
         <section id="section-contrato" class="panel-section" hidden aria-labelledby="contract-title">
@@ -88,9 +106,17 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-message"></span><button id="close-toast" type="button" aria-label="Fechar mensagem">×</button></div>
 
+  <div id="agenda-detail-modal" class="modal-overlay" hidden>
+    <section class="modal agenda-detail-modal" role="dialog" aria-modal="true" aria-labelledby="agenda-detail-title">
+      <header class="modal-header"><div><p class="eyebrow">Atendimento</p><h2 id="agenda-detail-title">Detalhes do atendimento</h2></div><button id="close-agenda-detail" class="icon-button" type="button" aria-label="Fechar detalhes">×</button></header>
+      <dl id="agenda-detail-content" class="agenda-detail-content"></dl>
+      <footer class="modal-actions"><button id="close-agenda-detail-button" class="button-secondary" type="button">Fechar</button></footer>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
-  <script src="js/profissional.js?v=1"></script>
+  <script src="js/profissional.js?v=8"></script>
 </body>
 </html>

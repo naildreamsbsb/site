@@ -1,0 +1,137 @@
+:root {
+  --theme-toggle-bg: #ffffff;
+  --theme-toggle-color: #873b59;
+  --theme-toggle-border: #eadde2;
+  --theme-toggle-shadow: 0 8px 24px rgba(72, 35, 50, .18);
+}
+
+.theme-toggle {
+  position: fixed;
+  z-index: 5000;
+  right: 1rem;
+  bottom: 1rem;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--theme-toggle-border);
+  border-radius: 50%;
+  color: var(--theme-toggle-color);
+  background: var(--theme-toggle-bg);
+  box-shadow: var(--theme-toggle-shadow);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.theme-toggle:hover:not(:disabled) { color: #fff; background: var(--primary, #a94f72); transform: translateY(-1px); }
+.theme-toggle:focus-visible { outline: 3px solid #dca8bb; outline-offset: 3px; }
+
+:root[data-theme="dark"] {
+  --background: #181317;
+  --surface: #251d22;
+  --surface-soft: #30232a;
+  --text: #f6edf1;
+  --muted: #c5b2bb;
+  --primary: #cf7196;
+  --primary-dark: #ed9bbb;
+  --primary-soft: #462b37;
+  --border: #4a3740;
+  --success: #65c397;
+  --success-soft: #183b2b;
+  --danger: #ef7d89;
+  --danger-soft: #492329;
+  --error: #ef7d89;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .3);
+  --theme-toggle-bg: #30232a;
+  --theme-toggle-color: #f6d4e1;
+  --theme-toggle-border: #604452;
+  --theme-toggle-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .login-page,
+:root[data-theme="dark"] .booking-page,
+:root[data-theme="dark"] .client-page {
+  color: var(--text);
+  background: radial-gradient(circle at top, #38232d 0, var(--background) 38rem);
+}
+
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .app-topbar,
+:root[data-theme="dark"] .client-header,
+:root[data-theme="dark"] .app-sidebar,
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .login-card,
+:root[data-theme="dark"] .client-card,
+:root[data-theme="dark"] .action-card,
+:root[data-theme="dark"] .service-card,
+:root[data-theme="dark"] .professional-card,
+:root[data-theme="dark"] .schedule-card,
+:root[data-theme="dark"] .confirmation-card,
+:root[data-theme="dark"] .loading-card,
+:root[data-theme="dark"] .state-card,
+:root[data-theme="dark"] .summary-card,
+:root[data-theme="dark"] .agenda-card,
+:root[data-theme="dark"] .contract-card,
+:root[data-theme="dark"] .working-day-card,
+:root[data-theme="dark"] .working-period,
+:root[data-theme="dark"] .completion-modal,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .finance-card,
+:root[data-theme="dark"] .mobile-data-card,
+:root[data-theme="dark"] .settings-group,
+:root[data-theme="dark"] .appointment-card,
+:root[data-theme="dark"] .appointments-empty,
+:root[data-theme="dark"] .empty-state {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .working-time-field input {
+  color: var(--text);
+  border-color: var(--border);
+  background: #21191e;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder { color: #9f8993; }
+:root[data-theme="dark"] select option { color: var(--text); background: #21191e; }
+
+:root[data-theme="dark"] .welcome-card,
+:root[data-theme="dark"] .upcoming-calm { border-color: var(--border); background: linear-gradient(135deg, #2b2026, #38242e); }
+:root[data-theme="dark"] .upcoming-card,
+:root[data-theme="dark"] .agenda-view-switch,
+:root[data-theme="dark"] .agenda-today-button,
+:root[data-theme="dark"] .week-calendar-scroll,
+:root[data-theme="dark"] .week-corner,
+:root[data-theme="dark"] .week-day-header,
+:root[data-theme="dark"] .week-time-rail { color: var(--text); border-color: var(--border); background: var(--surface); }
+:root[data-theme="dark"] .week-day-column { border-color: var(--border); background: repeating-linear-gradient(to bottom, #251d22 0, #251d22 43px, #493640 43px, #493640 44px); }
+:root[data-theme="dark"] .week-time-rail span { border-color: #493640; }
+:root[data-theme="dark"] .week-appointment { color: var(--text); border-color: #70485a; background: #3b2730; }
+:root[data-theme="dark"] .week-appointment.status-confirmed { background: #1d3b2e; }
+:root[data-theme="dark"] .week-appointment.status-requested,
+:root[data-theme="dark"] .week-appointment.status-deposit { background: #44351f; }
+:root[data-theme="dark"] .week-appointment.status-completed { background: #263642; }
+:root[data-theme="dark"] .agenda-card > header,
+:root[data-theme="dark"] .working-day-card.is-open > header { border-color: var(--border); background: var(--surface-soft); }
+:root[data-theme="dark"] .contract-content { color: var(--text); }
+:root[data-theme="dark"] .button-secondary,
+:root[data-theme="dark"] .site-link { color: var(--primary-dark); background: var(--primary-soft); }
+:root[data-theme="dark"] .finance-table th,
+:root[data-theme="dark"] .finance-table td { border-color: var(--border); }
+:root[data-theme="dark"] .finance-table tbody tr:hover { background: var(--surface-soft); }
+:root[data-theme="dark"] .service-category-tabs { border-color: var(--border); background: var(--surface); }
+:root[data-theme="dark"] .service-category-tabs button { color: var(--muted); background: transparent; }
+:root[data-theme="dark"] .service-category-tabs button:hover:not(:disabled) { color: var(--primary-dark); background: var(--surface-soft); }
+:root[data-theme="dark"] .service-category-tabs button.is-active { color: #fff; background: var(--primary); }
+
+@media (max-width: 620px) {
+  .theme-toggle { right: .75rem; bottom: .75rem; width: 42px; height: 42px; }
+}

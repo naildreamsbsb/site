@@ -60,6 +60,15 @@ let settingsSaving = false;
 let studioSettings = null;
 let studioSettingsLoadError = null;
 let contractValidationSaving = false;
+let adminWorkingHours = [];
+let adminWorkingHoursSequence = 0;
+let adminWorkingHoursLoading = false;
+let adminWorkingHoursSaving = false;
+let adminWorkingHoursRequestId = 0;
+
+const WORKING_HOURS_WEEKDAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const GOOGLE_REVIEW_URL = ""; // Preencher somente com o link oficial de avaliação direta da Nail Dreams.
+const CLIENT_RESCHEDULE_URL = "https://naildreams.com.br/cliente.html";
 
 const STUDIO_SETTINGS_FALLBACK = {
   studio_name: "Nail Dreams",
@@ -76,6 +85,7 @@ const SECTION_TITLES = {
   "new-appointment": "Novo agendamento",
   clients: "Clientes",
   professionals: "Profissionais",
+  "working-hours": "Horários das profissionais",
   contracts: "Contratos",
   services: "Serviços",
   settings: "Configurações",
@@ -88,7 +98,7 @@ function hideToast() {
   document.querySelector("#app-toast").hidden = true;
 }
 
-function showToast(message, type = "success") {
+function showToast(message, type = "success", duration) {
   const toast = document.querySelector("#app-toast");
   window.clearTimeout(toastTimeout);
   document.querySelector("#app-toast-message").textContent = message;
@@ -96,7 +106,7 @@ function showToast(message, type = "success") {
   toast.setAttribute("role", type === "error" ? "alert" : "status");
   toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
   toast.hidden = false;
-  toastTimeout = window.setTimeout(hideToast, type === "error" ? 7000 : 5000);
+  toastTimeout = window.setTimeout(hideToast, duration ?? (type === "error" ? 7000 : 5000));
 }
 
 const ACTIONABLE_STATUSES = new Set([
@@ -152,7 +162,7 @@ function showSection(sectionName) {
 function applyRoleBasedNavigation(profile) {
   const isAdmin = profile?.role === "admin";
   allowedSections = new Set(isAdmin
-    ? ["agenda", "new-appointment", "clients", "professionals", "contracts", "services", "settings", "finance", "commissions"]
+    ? ["agenda", "new-appointment", "clients", "professionals", "working-hours", "contracts", "services", "settings", "finance", "commissions"]
     : ["agenda", "new-appointment", "clients"]);
   document.querySelectorAll(".admin-only-navigation").forEach((item) => {
     item.hidden = !isAdmin;
@@ -250,6 +260,72 @@ function openWhatsAppMessage(phone, message) {
   return true;
 }
 
+function appointmentClientFirstName(appointment) {
+  return String(appointment?.clienteNome || "cliente").trim().split(/\s+/)[0] || "cliente";
+}
+
+function whatsappUrl(phone, message) {
+  const formattedPhone = formatWhatsAppPhone(phone);
+  return formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}` : null;
+}
+
+function prepareWhatsAppWindow() {
+  const preparedWindow = window.open("about:blank", "_blank");
+  if (preparedWindow) preparedWindow.opener = null;
+  return preparedWindow;
+}
+
+function closePreparedWhatsAppWindow(preparedWindow) {
+  if (preparedWindow && !preparedWindow.closed) preparedWindow.close();
+}
+
+function showWhatsAppFallback(url, message) {
+  agendaActionMessage.className = "message info";
+  agendaActionMessage.replaceChildren(document.createTextNode(`${message} `));
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "card-action-button action-whatsapp";
+  button.textContent = "Enviar mensagem pelo WhatsApp";
+  button.addEventListener("click", () => {
+    const openedWindow = window.open(url, "_blank");
+    if (openedWindow) openedWindow.opener = null;
+  });
+  agendaActionMessage.appendChild(button);
+}
+
+function openWhatsAppAfterSuccess(appointment, message, preparedWindow) {
+  const url = whatsappUrl(appointment?.clientePhone, message);
+  if (!url) {
+    closePreparedWhatsAppWindow(preparedWindow);
+    showToast("Status atualizado, mas a cliente não possui um telefone válido para abrir o WhatsApp.", "info");
+    return;
+  }
+  if (preparedWindow && !preparedWindow.closed) {
+    preparedWindow.location.replace(url);
+    return;
+  }
+  showWhatsAppFallback(url, "Status atualizado, mas o navegador bloqueou a abertura do WhatsApp.");
+}
+
+function confirmationWhatsAppMessage(appointment) {
+  return `Agendamento confirmado! 💕\n\nOlá, ${appointmentClientFirstName(appointment)}! Seu atendimento no Studio Nail Dreams foi confirmado.\n\n📅 ${displayValue(appointment.dataBr)}\n⏰ ${displayValue(appointment.horaInicio)} às ${displayValue(appointment.horaFim)}\n✨ ${displayValue(appointment.servicoNome)}\n👩‍🎨 ${displayValue(appointment.profissionalNome)}\n\nEsperamos você! ✨`;
+}
+
+function completionWhatsAppMessage(appointment) {
+  const reviewSection = GOOGLE_REVIEW_URL
+    ? `\n\n⭐ Avalie a Nail Dreams no Google:\n${GOOGLE_REVIEW_URL}`
+    : "";
+  return `Olá, ${appointmentClientFirstName(appointment)}! 💕\n\nFoi uma alegria receber você na Nail Dreams. Esperamos que seu momento com a gente tenha sido tão especial quanto foi para nós cuidar de você. ✨\n\nSe puder, conte como foi sua experiência. Sua avaliação ajuda outras pessoas a conhecerem nosso trabalho e nos ajuda a continuar melhorando.${reviewSection}\n\nEsperamos você novamente em breve. ❤️\n\nCom carinho,\nEquipe Nail Dreams`;
+}
+
+function cancellationWhatsAppMessage(appointment) {
+  return `Olá, ${appointmentClientFirstName(appointment)}! 💕\n\nSeu atendimento de ${displayValue(appointment.dataBr)}, às ${displayValue(appointment.horaInicio)}, foi cancelado.\n\nQuando quiser escolher um novo momento para cuidar de você, será um prazer receber você novamente na Nail Dreams. ✨\n\n📅 Para remarcar:\n${CLIENT_RESCHEDULE_URL}\n\nCom carinho,\nEquipe Nail Dreams`;
+}
+
+function noShowWhatsAppMessage(appointment) {
+  return `Olá, ${appointmentClientFirstName(appointment)}! 💕\n\nSentimos sua falta no atendimento marcado para ${displayValue(appointment.dataBr)}, às ${displayValue(appointment.horaInicio)}.\n\nSabemos que imprevistos acontecem. Para uma próxima marcação, será necessário o pagamento antecipado de 30% do valor do serviço como sinal de reserva.\n\nEssa medida nos ajuda a preservar o horário reservado especialmente para cada cliente e a organização da agenda das nossas profissionais. ✨\n\nQuando quiser reagendar, estaremos à disposição.\n\nEquipe Nail Dreams`;
+}
+
 function addDetail(container, label, value) {
   const item = document.createElement("div");
   const title = document.createElement("span");
@@ -276,11 +352,15 @@ async function runAppointmentAction(button, callback) {
   button.textContent = "Processando...";
   showMessage(agendaActionMessage, "");
 
+  let actionResult = null;
   try {
-    const successMessage = await callback();
+    actionResult = await callback();
+    const successMessage = typeof actionResult === "string" ? actionResult : actionResult.message;
     await loadAgenda();
     showToast(successMessage, "success");
+    actionResult.afterSuccess?.();
   } catch (error) {
+    actionResult?.onFailure?.();
     console.error("Erro ao executar ação no agendamento:", error);
     showToast(readableError(error, "Não foi possível concluir a ação."), "error");
   } finally {
@@ -446,6 +526,9 @@ async function handleCompletionSubmit(event) {
     return;
   }
 
+  const appointment = completionAppointment;
+  const preparedWhatsAppWindow = prepareWhatsAppWindow();
+
   completionSaving = true;
   confirmCompletionButton.disabled = true;
   cancelCompletionButton.disabled = true;
@@ -476,7 +559,9 @@ async function handleCompletionSubmit(event) {
     closeCompletionModal();
     await loadAgenda();
     showToast("Atendimento concluído com sucesso!", "success");
+    openWhatsAppAfterSuccess(appointment, completionWhatsAppMessage(appointment), preparedWhatsAppWindow);
   } catch (error) {
+    closePreparedWhatsAppWindow(preparedWhatsAppWindow);
     console.error("Erro ao concluir atendimento:", error);
     showMessage(completionMessage, readableError(error, "Não foi possível concluir o atendimento."));
   } finally {
@@ -544,6 +629,7 @@ async function submitAppointmentActionModal(event) {
   const { appointment, mode } = appointmentAction;
   const notes = document.querySelector("#appointment-action-notes").value.trim();
   const isCancel = mode === "cancel";
+  const preparedWhatsAppWindow = prepareWhatsAppWindow();
   appointmentActionSaving = true;
   confirmAppointmentActionButton.disabled = true;
   backAppointmentActionButton.disabled = true;
@@ -571,7 +657,13 @@ async function submitAppointmentActionModal(event) {
       isCancel ? "Agendamento cancelado com sucesso!" : "Agendamento marcado como não compareceu.",
       "success"
     );
+    openWhatsAppAfterSuccess(
+      appointment,
+      isCancel ? cancellationWhatsAppMessage(appointment) : noShowWhatsAppMessage(appointment),
+      preparedWhatsAppWindow
+    );
   } catch (error) {
+    closePreparedWhatsAppWindow(preparedWhatsAppWindow);
     console.error(`Erro ao ${isCancel ? "cancelar agendamento" : "registrar ausência"}:`, error);
     showMessage(appointmentActionMessage, readableError(error, "Não foi possível concluir a ação."));
   } finally {
@@ -650,13 +742,27 @@ function renderCardActions(card, appointment) {
 
   if (currentStatus !== "confirmado") {
     actions.appendChild(createActionButton("Confirmar", "action-confirm", (event) => {
+      const preparedWhatsAppWindow = prepareWhatsAppWindow();
       runAppointmentAction(event.currentTarget, async () => {
-        await callAppointmentRpc("confirmar_agendamento_staff", {
-          p_agendamento_id: appointment.id,
-          p_deposit_status: "pago",
-          p_notes: "Confirmado pelo painel administrativo."
-        });
-        return "Agendamento confirmado com sucesso.";
+        try {
+          await callAppointmentRpc("confirmar_agendamento_staff", {
+            p_agendamento_id: appointment.id,
+            p_deposit_status: "pago",
+            p_notes: "Confirmado pelo painel administrativo."
+          });
+          return {
+            message: "Agendamento confirmado com sucesso.",
+            afterSuccess: () => openWhatsAppAfterSuccess(
+              appointment,
+              confirmationWhatsAppMessage(appointment),
+              preparedWhatsAppWindow
+            ),
+            onFailure: () => closePreparedWhatsAppWindow(preparedWhatsAppWindow)
+          };
+        } catch (error) {
+          closePreparedWhatsAppWindow(preparedWhatsAppWindow);
+          throw error;
+        }
       });
     }));
   }
@@ -751,6 +857,260 @@ function fillSelect(selectId, items, nameFields) {
   });
 }
 
+function setAdminWorkingHoursMessage(text = "", type = "") {
+  showMessage(document.querySelector("#working-hours-message"), text, type);
+}
+
+function normalizeAdminWorkingHour(item) {
+  return {
+    clientId: `admin-working-hour-${adminWorkingHoursSequence += 1}`,
+    id: item?.id || null,
+    weekday: Number(item?.weekday),
+    startTime: item?.startTime ?? item?.start_time ?? "",
+    endTime: item?.endTime ?? item?.end_time ?? "",
+    active: item?.active === true
+  };
+}
+
+function createAdminWorkingHour(weekday) {
+  return normalizeAdminWorkingHour({ weekday, start_time: "09:00", end_time: "18:00", active: true });
+}
+
+function adminPeriodsForDay(weekday) {
+  return adminWorkingHours
+    .filter((period) => period.weekday === weekday)
+    .sort((first, second) => first.startTime.localeCompare(second.startTime));
+}
+
+function createAdminTimeField(period, field, label) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "working-time-field";
+  const caption = document.createElement("span");
+  caption.textContent = label;
+  const input = document.createElement("input");
+  input.type = "time";
+  input.step = "300";
+  input.required = true;
+  input.value = period[field];
+  input.addEventListener("input", () => {
+    period[field] = input.value;
+    input.classList.remove("invalid");
+    setAdminWorkingHoursMessage();
+  });
+  wrapper.append(caption, input);
+  return wrapper;
+}
+
+function createAdminPeriodRow(period) {
+  const row = document.createElement("div");
+  row.className = "working-period";
+  row.dataset.clientId = period.clientId;
+  row.append(createAdminTimeField(period, "startTime", "Início"));
+  const separator = document.createElement("span");
+  separator.className = "working-time-separator";
+  separator.textContent = "às";
+  row.append(separator, createAdminTimeField(period, "endTime", "Fim"));
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.className = "working-period-remove";
+  removeButton.textContent = "Remover";
+  removeButton.setAttribute("aria-label", `Remover período de ${WORKING_HOURS_WEEKDAYS[period.weekday]}`);
+  removeButton.addEventListener("click", () => {
+    adminWorkingHours = adminWorkingHours.filter((item) => item.clientId !== period.clientId);
+    setAdminWorkingHoursMessage();
+    renderAdminWorkingHours();
+  });
+  row.appendChild(removeButton);
+  return row;
+}
+
+function createAdminWorkingDay(weekday) {
+  const periods = adminPeriodsForDay(weekday);
+  const activePeriods = periods.filter((period) => period.active);
+  const isOpen = activePeriods.length > 0;
+  const card = document.createElement("article");
+  card.className = `working-day-card${isOpen ? " is-open" : ""}`;
+  const header = document.createElement("header");
+  const heading = document.createElement("div");
+  const title = document.createElement("h3");
+  title.textContent = WORKING_HOURS_WEEKDAYS[weekday];
+  const summary = document.createElement("p");
+  summary.textContent = isOpen ? `${activePeriods.length} período(s)` : "Não atende";
+  heading.append(title, summary);
+  const toggleLabel = document.createElement("label");
+  toggleLabel.className = "working-day-toggle";
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.checked = isOpen;
+  const toggleText = document.createElement("span");
+  toggleText.textContent = isOpen ? "Atende" : "Não atende";
+  toggle.addEventListener("change", () => {
+    let dayPeriods = adminPeriodsForDay(weekday);
+    if (toggle.checked && !dayPeriods.length) {
+      adminWorkingHours.push(createAdminWorkingHour(weekday));
+      dayPeriods = adminPeriodsForDay(weekday);
+    }
+    dayPeriods.forEach((period) => { period.active = toggle.checked; });
+    setAdminWorkingHoursMessage();
+    renderAdminWorkingHours();
+  });
+  toggleLabel.append(toggle, toggleText);
+  header.append(heading, toggleLabel);
+  card.appendChild(header);
+  if (isOpen) {
+    const list = document.createElement("div");
+    list.className = "working-periods";
+    activePeriods.forEach((period) => list.appendChild(createAdminPeriodRow(period)));
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "working-period-add";
+    addButton.textContent = "+ Adicionar período";
+    addButton.addEventListener("click", () => {
+      adminWorkingHours.push(createAdminWorkingHour(weekday));
+      setAdminWorkingHoursMessage();
+      renderAdminWorkingHours();
+    });
+    card.append(list, addButton);
+  }
+  return card;
+}
+
+function renderAdminWorkingHours() {
+  const week = document.createElement("div");
+  week.className = "working-hours-week";
+  WORKING_HOURS_WEEKDAYS.forEach((_day, weekday) => week.appendChild(createAdminWorkingDay(weekday)));
+  document.querySelector("#working-hours-content").replaceChildren(week);
+}
+
+function markInvalidAdminPeriod(period) {
+  const row = document.querySelector(`#working-hours-content [data-client-id="${period.clientId}"]`);
+  row?.querySelectorAll('input[type="time"]').forEach((input) => input.classList.add("invalid"));
+  row?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function validateAdminWorkingHours() {
+  const activePeriods = adminWorkingHours.filter((period) => period.active);
+  for (const period of activePeriods) {
+    if (!period.startTime || !period.endTime) {
+      markInvalidAdminPeriod(period);
+      return "Preencha o horário inicial e final de todos os períodos ativos.";
+    }
+    if (period.startTime >= period.endTime) {
+      markInvalidAdminPeriod(period);
+      return `${WORKING_HOURS_WEEKDAYS[period.weekday]} possui um período em que o início não é anterior ao fim.`;
+    }
+  }
+  for (let weekday = 0; weekday < WORKING_HOURS_WEEKDAYS.length; weekday += 1) {
+    const periods = activePeriods
+      .filter((period) => period.weekday === weekday)
+      .sort((first, second) => first.startTime.localeCompare(second.startTime));
+    for (let index = 1; index < periods.length; index += 1) {
+      if (periods[index].startTime < periods[index - 1].endTime) {
+        markInvalidAdminPeriod(periods[index]);
+        return `${WORKING_HOURS_WEEKDAYS[weekday]} possui períodos sobrepostos.`;
+      }
+    }
+  }
+  return "";
+}
+
+function adminWorkingHoursPayload() {
+  return adminWorkingHours.map((period) => ({
+    ...(period.id ? { id: period.id } : {}),
+    weekday: period.weekday,
+    start_time: period.startTime,
+    end_time: period.endTime,
+    active: period.active
+  }));
+}
+
+function setupAdminWorkingHoursProfessionals() {
+  const select = document.querySelector("#working-hours-professional");
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecione uma profissional";
+  select.replaceChildren(placeholder);
+  fillSelect("#working-hours-professional", activeProfessionals, ["nome", "name"]);
+}
+
+async function loadAdminWorkingHours() {
+  if (currentUserRole !== "admin") return;
+  const professionalId = document.querySelector("#working-hours-professional").value;
+  const button = document.querySelector("#save-working-hours-button");
+  const content = document.querySelector("#working-hours-content");
+  const requestId = adminWorkingHoursRequestId += 1;
+  setAdminWorkingHoursMessage();
+  button.disabled = true;
+  adminWorkingHours = [];
+  if (!professionalId) {
+    content.innerHTML = '<div class="empty-state">Selecione uma profissional para visualizar os horários.</div>';
+    return;
+  }
+  adminWorkingHoursLoading = true;
+  content.innerHTML = '<div class="empty-state">Carregando horários...</div>';
+  try {
+    const { data, error } = await supabaseClient.rpc("listar_horarios_profissional_staff", {
+      p_profissional_id: professionalId
+    });
+    if (error) throw error;
+    if (requestId !== adminWorkingHoursRequestId) return;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.success) throw new Error(result?.message || "Não foi possível carregar os horários.");
+    adminWorkingHours = (Array.isArray(result.items) ? result.items : []).map(normalizeAdminWorkingHour);
+    renderAdminWorkingHours();
+    button.disabled = false;
+  } catch (error) {
+    if (requestId !== adminWorkingHoursRequestId) return;
+    console.error("Erro ao carregar horários da profissional:", error);
+    content.innerHTML = '<div class="empty-state">Não foi possível carregar os horários desta profissional.</div>';
+    setAdminWorkingHoursMessage(readableError(error, "Não foi possível carregar os horários desta profissional."), "error");
+  } finally {
+    if (requestId === adminWorkingHoursRequestId) adminWorkingHoursLoading = false;
+  }
+}
+
+async function saveAdminWorkingHours() {
+  if (currentUserRole !== "admin" || adminWorkingHoursLoading || adminWorkingHoursSaving) return;
+  const professionalId = document.querySelector("#working-hours-professional").value;
+  if (!professionalId) {
+    setAdminWorkingHoursMessage("Selecione uma profissional antes de salvar.", "error");
+    return;
+  }
+  const validationError = validateAdminWorkingHours();
+  if (validationError) {
+    setAdminWorkingHoursMessage(validationError, "error");
+    return;
+  }
+  const payload = adminWorkingHoursPayload();
+  if (!payload.some((period) => period.active)) {
+    const confirmed = window.confirm("Você está prestes a deixar esta profissional sem nenhum horário de atendimento. Deseja continuar?");
+    if (!confirmed) return;
+  }
+  const button = document.querySelector("#save-working-hours-button");
+  adminWorkingHoursSaving = true;
+  setBusy(button, true, "Salvando horários...");
+  setAdminWorkingHoursMessage("Salvando horários...", "info");
+  try {
+    const { data, error } = await supabaseClient.rpc("salvar_horarios_profissional_admin", {
+      p_profissional_id: professionalId,
+      p_periodos: payload
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.success) throw new Error(result?.message || "Não foi possível salvar os horários.");
+    setAdminWorkingHoursMessage();
+    showToast("✓ Horários salvos com sucesso!", "success", 3000);
+    await loadAdminWorkingHours();
+  } catch (error) {
+    console.error("Erro ao salvar horários da profissional:", error);
+    setAdminWorkingHoursMessage(readableError(error, "Não foi possível salvar os horários."), "error");
+  } finally {
+    adminWorkingHoursSaving = false;
+    setBusy(button, false, "");
+    button.disabled = !document.querySelector("#working-hours-professional").value;
+  }
+}
+
 async function loadCatalogs() {
   const [professionalsResult, servicesResult] = await Promise.all([
     supabaseClient.from("profissionais").select("*").eq("active", true),
@@ -766,6 +1126,7 @@ async function loadCatalogs() {
   placeholder.textContent = "Selecione";
   professionalSelect.replaceChildren(placeholder);
   fillSelect("#profissional", activeProfessionals, ["nome", "name"]);
+  if (currentUserRole === "admin") setupAdminWorkingHoursProfessionals();
   setServiceSelectPlaceholder("Selecione uma profissional primeiro");
   resetAvailableTimes("Selecione uma profissional primeiro.");
 }
@@ -2517,6 +2878,8 @@ document.querySelector("#clients-search-form").addEventListener("submit", loadCl
 document.querySelector("#new-client-button").addEventListener("click", () => openRegistrationModal("client"));
 document.querySelector("#new-professional-button").addEventListener("click", () => openRegistrationModal("professional"));
 document.querySelector("#new-service-button").addEventListener("click", () => openRegistrationModal("service"));
+document.querySelector("#working-hours-professional").addEventListener("change", loadAdminWorkingHours);
+document.querySelector("#save-working-hours-button").addEventListener("click", saveAdminWorkingHours);
 settingsForm.addEventListener("submit", saveStudioSettings);
 completionForm.addEventListener("submit", handleCompletionSubmit);
 cancelCompletionButton.addEventListener("click", closeCompletionModal);

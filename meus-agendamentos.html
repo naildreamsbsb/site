@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus agendamentos | Nail Dreams</title>
+  <link rel="stylesheet" href="css/cliente.css?v=1">
+  <link rel="stylesheet" href="css/meus-agendamentos.css?v=1">
+  <link rel="stylesheet" href="css/theme.css?v=2">
+  <script src="js/theme.js?v=1"></script>
+</head>
+<body class="client-page appointments-page">
+  <header class="client-header">
+    <a class="client-brand" href="cliente.html" aria-label="Voltar para a área da cliente">
+      <span class="brand-mark">ND</span>
+      <span><strong>Nail Dreams</strong><small>Área da cliente</small></span>
+    </a>
+    <a class="site-link" href="cliente.html">Voltar para minha área</a>
+  </header>
+
+  <main class="client-main appointments-main">
+    <section class="appointments-heading">
+      <div>
+        <p class="eyebrow">Sua agenda Nail Dreams</p>
+        <h1>Olá, <span id="appointments-client-name">cliente</span>!</h1>
+        <p>Acompanhe seus próximos horários e seu histórico de atendimentos.</p>
+      </div>
+      <a class="new-booking-link" href="agendar.html">Novo agendamento</a>
+    </section>
+
+    <p id="appointments-message" class="message" role="alert" aria-live="polite"></p>
+
+    <section id="appointments-loading" class="appointments-state" aria-live="polite">
+      <span class="loading-mark" aria-hidden="true"></span>
+      <p>Carregando seus agendamentos...</p>
+    </section>
+
+    <div id="appointments-content" hidden>
+      <section class="appointments-section" aria-labelledby="upcoming-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Sua próxima visita</p><h2 id="upcoming-title">Próximos atendimentos</h2></div>
+          <span id="upcoming-count" class="section-count"></span>
+        </div>
+        <div id="upcoming-appointments" class="appointments-grid"></div>
+      </section>
+
+      <section class="appointments-section history-section" aria-labelledby="history-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Sua história conosco</p><h2 id="history-title">Histórico de atendimentos</h2></div>
+          <span id="history-count" class="section-count"></span>
+        </div>
+        <div id="appointment-history" class="appointments-grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=1"></script>
+  <script src="js/supabaseClient.js?v=1"></script>
+  <script src="js/meus-agendamentos.js?v=1"></script>
+</body>
+</html>

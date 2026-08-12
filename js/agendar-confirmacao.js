@@ -1,11 +1,14 @@
 const CLIENT_ROLE = "cliente";
 const TEMP_BOOKING_KEY = "agendamento_temp";
+const STUDIO_WHATSAPP_NUMBER = "5561985879423";
 
 const confirmationCard = document.querySelector("#confirmation-card");
 const confirmationMessage = document.querySelector("#confirmation-message");
 const confirmButton = document.querySelector("#confirm-booking-button");
+const whatsappStudioButton = document.querySelector("#whatsapp-studio-button");
 
 let temporaryBooking = null;
+let authenticatedClientName = "Cliente";
 
 function showMessage(text = "", type = "error") {
   confirmationMessage.textContent = text;
@@ -41,6 +44,54 @@ function formatCurrency(value) {
 function formatDate(value) {
   const [year, month, day] = String(value || "").split("-");
   return year && month && day ? `${day}/${month}/${year}` : "—";
+}
+
+function clientDisplayName(user) {
+  return user.user_metadata?.full_name
+    || user.user_metadata?.name
+    || user.email?.split("@")[0]
+    || "Cliente";
+}
+
+function buildWhatsAppUrl(result) {
+  const status = result?.status
+    || result?.agendamento?.status
+    || result?.appointment?.status
+    || "solicitado";
+  const statusLabel = String(status).replaceAll("_", " ");
+  const message = [
+    "Novo agendamento Nail Dreams 💕",
+    "",
+    `Cliente: ${temporaryBooking.cliente_nome || authenticatedClientName}`,
+    `Profissional: ${temporaryBooking.profissional_nome || "Não informada"}`,
+    `Serviço: ${temporaryBooking.servico_nome || "Não informado"}`,
+    `Data: ${formatDate(temporaryBooking.data)}`,
+    `Horário: ${temporaryBooking.hora_inicio} às ${temporaryBooking.hora_fim}`,
+    `Status: ${statusLabel}`,
+    "",
+    "Novo agendamento realizado pelo sistema Nail Dreams."
+  ].join("\n");
+
+  return `https://wa.me/${STUDIO_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+function openWhatsAppAfterSuccess(url) {
+  const whatsappWindow = window.open(url, "_blank");
+  if (whatsappWindow) {
+    whatsappWindow.opener = null;
+    return true;
+  }
+
+  whatsappStudioButton.hidden = false;
+  whatsappStudioButton.addEventListener("click", () => {
+    const fallbackWindow = window.open(url, "_blank");
+    if (fallbackWindow) {
+      fallbackWindow.opener = null;
+    } else {
+      window.location.assign(url);
+    }
+  }, { once: true });
+  return false;
 }
 
 function depositAmount(booking) {
@@ -156,9 +207,12 @@ async function confirmReview() {
     if (result?.success === true) {
       confirmButton.textContent = "Agendamento solicitado";
       showMessage(result.message || "Agendamento solicitado com sucesso.", "success");
+      const whatsappOpened = openWhatsAppAfterSuccess(buildWhatsAppUrl(result));
       window.localStorage.removeItem(TEMP_BOOKING_KEY);
       confirmationMessage.scrollIntoView({ behavior: "smooth", block: "center" });
-      window.setTimeout(() => window.location.replace("cliente.html"), 3000);
+      if (whatsappOpened) {
+        window.setTimeout(() => window.location.replace("cliente.html"), 3000);
+      }
       return;
     }
 
@@ -183,6 +237,7 @@ async function initializeConfirmation() {
   try {
     const session = await requireClientSession();
     if (!session) return;
+    authenticatedClientName = clientDisplayName(session.user);
     renderConfirmation(temporaryBooking);
     confirmButton.addEventListener("click", confirmReview);
   } catch (error) {
