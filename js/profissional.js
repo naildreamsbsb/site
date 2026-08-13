@@ -13,6 +13,7 @@ let agendaSelectedDate = null;
 let agendaAuthenticatedUser = null;
 let agendaRequestId = 0;
 let agendaLoading = false;
+let professionalFinanceLoading = false;
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -37,6 +38,146 @@ function formatPercentage(value) {
   if (value === null || value === undefined || value === "") return "—";
   const number = Number(value);
   return Number.isFinite(number) ? `${number.toLocaleString("pt-BR")} %` : displayValue(value);
+}
+
+function formatCurrency(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount)
+    ? amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : "—";
+}
+
+function setProfessionalFinanceMessage(text = "", type = "") {
+  const element = $("#professional-finance-message");
+  element.textContent = text;
+  element.className = `message${type ? ` ${type}` : ""}`;
+}
+
+function createFinanceSummaryCard(label, value, monetary = true) {
+  const card = document.createElement("article");
+  card.className = "professional-finance-card";
+  const caption = document.createElement("span");
+  caption.textContent = label;
+  const content = document.createElement("strong");
+  content.textContent = monetary ? formatCurrency(value) : Number(value || 0).toLocaleString("pt-BR");
+  card.append(caption, content);
+  return card;
+}
+
+function commissionStatusLabel(value) {
+  if (!value) return "Não gerada";
+  const labels = { calculada: "Calculada", aprovada: "Aprovada", paga: "Paga", cancelada: "Cancelada" };
+  return labels[value] || String(value).replaceAll("_", " ");
+}
+
+function renderProfessionalFinance(data = {}) {
+  const container = $("#professional-finance-content");
+  container.replaceChildren();
+  const summary = data.resumo || {};
+  const cards = document.createElement("div");
+  cards.className = "professional-finance-summary";
+  cards.append(
+    createFinanceSummaryCard("Atendimentos realizados", summary.totalAtendimentosConcluidos, false),
+    createFinanceSummaryCard("Receita dos serviços", summary.receitaGerada),
+    createFinanceSummaryCard("Valor recebido", summary.valorRecebido),
+    createFinanceSummaryCard("Minha comissão", summary.comissaoTotal),
+    createFinanceSummaryCard("Comissão paga", summary.comissaoPaga),
+    createFinanceSummaryCard("Comissão pendente", summary.comissaoPendente)
+  );
+  container.appendChild(cards);
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (!items.length) {
+    const empty = document.createElement("article");
+    empty.className = "state-card professional-finance-empty";
+    empty.textContent = "Nenhum atendimento financeiro encontrado neste período.";
+    container.appendChild(empty);
+    return;
+  }
+
+  const details = document.createElement("section");
+  details.className = "professional-finance-details";
+  const heading = document.createElement("h3");
+  heading.textContent = "Atendimentos do período";
+  const list = document.createElement("div");
+  list.className = "professional-finance-list";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "professional-finance-item";
+    const cardHeading = document.createElement("header");
+    const service = document.createElement("strong");
+    service.textContent = displayValue(item.servico);
+    const date = document.createElement("span");
+    date.textContent = item.dataBr || formatDate(item.data);
+    cardHeading.append(service, date);
+    const fields = document.createElement("dl");
+    [
+      ["Cliente", displayValue(item.cliente), false],
+      ["Valor do serviço", formatCurrency(item.valorServico), true],
+      ["Valor recebido", formatCurrency(item.valorRecebido), true],
+      ["Minha comissão", formatCurrency(item.comissao), true],
+      ["Status", commissionStatusLabel(item.statusComissao), false]
+    ].forEach(([label, value, monetary]) => {
+      const field = createDetail(label, value);
+      if (monetary) field.classList.add("finance-money");
+      fields.appendChild(field);
+    });
+    card.append(cardHeading, fields);
+    list.appendChild(card);
+  });
+  details.append(heading, list);
+  container.appendChild(details);
+}
+
+async function loadProfessionalFinance(event) {
+  event?.preventDefault();
+  if (professionalFinanceLoading) return;
+  const startDate = $("#professional-finance-start").value;
+  const endDate = $("#professional-finance-end").value;
+  if (!startDate || !endDate) {
+    setProfessionalFinanceMessage("Informe a data inicial e a data final.", "error");
+    return;
+  }
+  if (endDate < startDate) {
+    setProfessionalFinanceMessage("A data final não pode ser anterior à data inicial.", "error");
+    return;
+  }
+
+  professionalFinanceLoading = true;
+  const button = $("#load-professional-finance");
+  button.disabled = true;
+  button.textContent = "Consultando...";
+  setProfessionalFinanceMessage();
+  try {
+    const { data, error } = await supabaseClient.rpc("listar_meu_resumo_financeiro_profissional", {
+      p_data_inicio: startDate,
+      p_data_fim: endDate
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.success) throw new Error(result?.message || "Não foi possível consultar seu financeiro.");
+    renderProfessionalFinance(result);
+    const start = new Date(`${startDate}T12:00:00`);
+    const end = new Date(`${endDate}T12:00:00`);
+    $("#professional-finance-period-label").textContent = `Período: ${formatAgendaDate(start)} até ${formatAgendaDate(end)}`;
+  } catch (error) {
+    console.error("Erro ao carregar financeiro profissional:", error);
+    $("#professional-finance-content").replaceChildren();
+    setProfessionalFinanceMessage(errorMessage(error, "Não foi possível consultar seu financeiro."), "error");
+  } finally {
+    professionalFinanceLoading = false;
+    button.disabled = false;
+    button.textContent = "Consultar";
+  }
+}
+
+function setupProfessionalFinanceDates() {
+  const today = saoPauloToday();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1, 12);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0, 12);
+  $("#professional-finance-start").value = localDateValue(firstDay);
+  $("#professional-finance-end").value = localDateValue(lastDay);
+  $("#professional-finance-period-label").textContent = `Período: ${new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today)}`;
 }
 
 function professionalName(profile, professional, user) {
@@ -905,7 +1046,6 @@ function showSection(section) {
     agenda: "Minha agenda",
     solicitacoes: "Solicitações",
     producao: "Produção",
-    comissoes: "Comissões"
   };
   const target = section === "dashboard" || section === "agenda" || section === "horarios" || section === "contrato"
     ? section
@@ -953,6 +1093,7 @@ async function initialize() {
     const name = professionalName(profile, professional, session.user);
     $("#professional-name").textContent = name;
     $("#first-name").textContent = name.trim().split(/\s+/)[0];
+    setupProfessionalFinanceDates();
     await Promise.all([
       loadContract(),
       loadWorkingHours(),
@@ -963,6 +1104,7 @@ async function initialize() {
     ]);
     $("#page-loading").hidden = true;
     $("#professional-app").hidden = false;
+    loadProfessionalFinance();
   } catch (error) {
     console.error("Erro ao iniciar painel profissional:", error);
     await supabaseClient.auth.signOut();
@@ -980,6 +1122,7 @@ $("#agenda-today").addEventListener("click", () => {
   carregarMinhaAgenda(agendaAuthenticatedUser);
 });
 $("#save-working-hours").addEventListener("click", saveWorkingHours);
+$("#professional-finance-form").addEventListener("submit", loadProfessionalFinance);
 $("#logout-button").addEventListener("click", async () => { await supabaseClient.auth.signOut(); window.location.replace("login.html"); });
 $("#close-contract-modal").addEventListener("click", () => closeModal("#contract-modal"));
 $("#close-contract-button").addEventListener("click", () => closeModal("#contract-modal"));

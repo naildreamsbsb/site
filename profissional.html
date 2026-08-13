@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#a94f72">
   <title>Painel da profissional | Nail Dreams</title>
-  <link rel="stylesheet" href="css/profissional.css?v=7">
-  <link rel="stylesheet" href="css/theme.css?v=2">
+  <link rel="stylesheet" href="css/profissional.css?v=9">
+  <link rel="stylesheet" href="css/theme.css?v=3">
   <script src="js/theme.js?v=1"></script>
 </head>
 <body>
@@ -36,7 +36,6 @@
         <button class="nav-item" type="button" data-section="solicitacoes"><span aria-hidden="true">♡</span>Solicitações<small>Em breve</small></button>
         <button class="nav-item" type="button" data-section="contrato"><span aria-hidden="true">◇</span>Meu contrato</button>
         <button class="nav-item" type="button" data-section="producao"><span aria-hidden="true">↗</span>Produção<small>Em breve</small></button>
-        <button class="nav-item" type="button" data-section="comissoes"><span aria-hidden="true">$</span>Comissões<small>Em breve</small></button>
       </nav>
 
       <main class="content">
@@ -46,12 +45,18 @@
             <h1 id="dashboard-title">Olá, <span id="first-name">profissional</span> 💗</h1>
             <p>Acompanhe sua parceria e acesse as informações importantes do seu dia a dia.</p>
           </div>
-          <div class="summary-grid" aria-label="Resumo financeiro">
-            <article class="summary-card"><span>Valor bruto no período</span><strong>—</strong><small>Em breve</small></article>
-            <article class="summary-card"><span>Comissão acumulada</span><strong>—</strong><small>Em breve</small></article>
-            <article class="summary-card"><span>Já recebido</span><strong>—</strong><small>Em breve</small></article>
-            <article class="summary-card"><span>Saldo disponível</span><strong>—</strong><small>Em breve</small></article>
-          </div>
+          <section class="dashboard-finance" aria-labelledby="dashboard-finance-title">
+            <div class="dashboard-finance-heading">
+              <div><p class="eyebrow">✨ Meu resultado</p><h2 id="dashboard-finance-title">Acompanhe seu mês</h2><p id="professional-finance-period-label"></p></div>
+              <form id="professional-finance-form" class="professional-finance-filters">
+                <label>Data inicial<input id="professional-finance-start" type="date" required></label>
+                <label>Data final<input id="professional-finance-end" type="date" required></label>
+                <button id="load-professional-finance" type="submit">Consultar</button>
+              </form>
+            </div>
+            <p id="professional-finance-message" class="message" role="alert" aria-live="polite"></p>
+            <div id="professional-finance-content" aria-live="polite"><article class="state-card">Carregando seu resultado...</article></div>
+          </section>
         </section>
 
         <section id="section-agenda" class="panel-section" hidden aria-labelledby="agenda-title">
@@ -117,6 +122,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
-  <script src="js/profissional.js?v=8"></script>
+  <script src="js/profissional.js?v=10"></script>
 </body>
 </html>
