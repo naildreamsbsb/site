@@ -44,6 +44,15 @@ function visualCategory(service) {
   return "unhas";
 }
 
+function presentationPriority(service) {
+  if (visualCategory(service) !== "corpo") return 0;
+
+  const name = normalizeCategoryText(service?.name).trim();
+  if (name === "quiropraxia completa") return 0;
+  if (name === "quiropraxia adicional") return 1;
+  return 2;
+}
+
 async function requireClientSession() {
   const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
   if (sessionError) throw sessionError;
@@ -131,7 +140,9 @@ function createServiceCard(service) {
 
 function renderServices() {
   servicesContent.replaceChildren();
-  const services = servicesCatalog.filter((service) => visualCategory(service) === selectedVisualCategory);
+  const services = servicesCatalog
+    .filter((service) => visualCategory(service) === selectedVisualCategory)
+    .sort((first, second) => presentationPriority(first) - presentationPriority(second));
 
   if (!services.length) {
     const emptyState = document.createElement("p");

@@ -214,6 +214,21 @@ h1, h2, h3, p { margin-top: 0; }
 .management-table { min-width: 960px; }
 .management-actions { display: flex; align-items: center; gap: .4rem; }
 .management-actions button { padding: .45rem .65rem; white-space: nowrap; font-size: .76rem; }
+.services-management-content { min-width: 0; max-width: 100%; }
+.services-management-content .finance-table-wrapper { max-width: 100%; }
+.services-management-content .management-table { width: 100%; min-width: 0; table-layout: fixed; white-space: normal; }
+.services-management-content .management-table th,
+.services-management-content .management-table td { min-width: 0; overflow-wrap: anywhere; }
+.services-management-content .management-table th:nth-child(1) { width: 14%; }
+.services-management-content .management-table th:nth-child(2) { width: 10%; }
+.services-management-content .management-table th:nth-child(3) { width: 26%; }
+.services-management-content .management-table th:nth-child(4) { width: 8%; }
+.services-management-content .management-table th:nth-child(5) { width: 9%; }
+.services-management-content .management-table th:nth-child(6) { width: 6%; }
+.services-management-content .management-table th:nth-child(7) { width: 9%; }
+.services-management-content .management-table th:nth-child(8) { width: 7%; }
+.services-management-content .management-table th:nth-child(9) { width: 11%; }
+.services-management-content .management-actions { flex-wrap: wrap; }
 .management-edit-button { color: var(--primary); background: #f7e9ee; }
 .management-edit-button:hover:not(:disabled) { color: #fff; }
 .management-disable-button { background: var(--error); }
