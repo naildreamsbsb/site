@@ -81,7 +81,46 @@ function addDetail(list, icon, label, value) {
   list.appendChild(wrapper);
 }
 
+function appointmentProcedureItems(appointment) {
+  return Array.isArray(appointment?.itens) ? appointment.itens : [];
+}
+
+function formatProcedureTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo"
+  }).format(date);
+}
+
+function createProceduresList(items) {
+  const section = document.createElement("section");
+  section.className = "client-procedures";
+  const heading = document.createElement("h4");
+  heading.textContent = "Procedimentos";
+  const list = document.createElement("div");
+  list.className = "client-procedures-list";
+  items.forEach((procedure) => {
+    const item = document.createElement("article");
+    const service = document.createElement("strong");
+    const professional = document.createElement("span");
+    const time = document.createElement("span");
+    service.textContent = procedure.servicoNome || "Procedimento";
+    professional.textContent = procedure.profissionalNome || "Profissional não informada";
+    time.textContent = `${formatProcedureTime(procedure.startAt)} às ${formatProcedureTime(procedure.endAt)}`;
+    item.append(service, professional, time);
+    list.appendChild(item);
+  });
+  section.append(heading, list);
+  return section;
+}
+
 function createAppointmentCard(appointment) {
+  const procedures = appointmentProcedureItems(appointment);
   const card = document.createElement("article");
   card.className = "appointment-card";
   const header = document.createElement("div");
@@ -94,10 +133,12 @@ function createAppointmentCard(appointment) {
   serviceIcon.textContent = "✨";
   const serviceText = document.createElement("div");
   const title = document.createElement("h3");
-  title.textContent = appointment.servicoNome || "Atendimento Nail Dreams";
+  title.textContent = procedures.length
+    ? `${procedures.length} ${procedures.length === 1 ? "procedimento" : "procedimentos"}`
+    : appointment.servicoNome || "Atendimento Nail Dreams";
   const category = document.createElement("p");
   category.className = "appointment-category";
-  category.textContent = appointment.servicoCategoria || "Serviço";
+  category.textContent = procedures.length ? "Atendimento Nail Dreams" : appointment.servicoCategoria || "Serviço";
   serviceText.append(title, category);
   service.append(serviceIcon, serviceText);
 
@@ -111,7 +152,9 @@ function createAppointmentCard(appointment) {
   details.className = "appointment-details";
   addDetail(details, "📅", "Data", formatDate(appointment.data));
   addDetail(details, "⏰", "Horário", `${appointment.horaInicio || "—"} às ${appointment.horaFim || "—"}`);
-  addDetail(details, "👩", "Profissional", appointment.profissionalNome || "Profissional não informada");
+  if (!procedures.length) {
+    addDetail(details, "👩", "Profissional", appointment.profissionalNome || "Profissional não informada");
+  }
 
   const finance = document.createElement("div");
   finance.className = "appointment-finance";
@@ -134,7 +177,9 @@ function createAppointmentCard(appointment) {
     finance.appendChild(payment);
   }
 
-  card.append(header, details);
+  card.append(header);
+  if (procedures.length) card.appendChild(createProceduresList(procedures));
+  card.appendChild(details);
   if (finance.childElementCount) card.appendChild(finance);
   return card;
 }

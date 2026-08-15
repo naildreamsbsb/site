@@ -28,6 +28,9 @@ const closeRegistrationButton = document.querySelector("#close-registration-moda
 const settingsForm = document.querySelector("#settings-form");
 const settingsMessage = document.querySelector("#settings-message");
 const saveSettingsButton = document.querySelector("#save-settings-button");
+const paymentCorrectionModal = document.querySelector("#payment-correction-modal");
+const paymentCorrectionForm = document.querySelector("#payment-correction-form");
+const paymentCorrectionMessage = document.querySelector("#payment-correction-message");
 const contractViewModal = document.querySelector("#contract-view-modal");
 const closeContractViewButton = document.querySelector("#close-contract-view");
 const backContractViewButton = document.querySelector("#back-contract-view");
@@ -54,11 +57,19 @@ let registrationSaving = false;
 let clientsCache = [];
 let professionalsCache = [];
 let servicesCache = [];
+let v2SelectedClient = null;
+let v2Procedures = [];
+let v2ClientRegistrationPending = false;
+let v2AvailabilityRequestId = 0;
+let v2ClientSearchRequestId = 0;
+let v2ClientSearchTimeout;
 let currentUserId = null;
 let settingsLoading = false;
 let settingsSaving = false;
 let studioSettings = null;
 let studioSettingsLoadError = null;
+let paymentCorrectionAppointment = null;
+let paymentCorrectionSaving = false;
 let contractValidationSaving = false;
 let adminWorkingHours = [];
 let adminWorkingHoursSequence = 0;
@@ -154,7 +165,10 @@ function showSection(sectionName) {
     console.warn("Não foi possível salvar a seção atual:", error);
   }
   closeSidebar();
-  if (safeSection === "new-appointment") resetNewAppointmentForm();
+  if (safeSection === "new-appointment") {
+    resetNewAppointmentForm();
+    resetV2AppointmentForm();
+  }
   if (safeSection === "settings" && currentUserRole === "admin") loadStudioSettings();
   if (safeSection === "contracts" && currentUserRole === "admin") loadContracts();
 }
@@ -334,6 +348,47 @@ function addDetail(container, label, value) {
   content.textContent = displayValue(value);
   item.append(title, content);
   container.appendChild(item);
+}
+
+function appointmentProcedureItems(appointment) {
+  return Array.isArray(appointment?.itens) ? appointment.itens : [];
+}
+
+function formatAppointmentItemTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return displayValue(value);
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo"
+  }).format(date);
+}
+
+function renderAppointmentProcedures(appointment) {
+  const items = appointmentProcedureItems(appointment);
+  if (!items.length) return null;
+  const section = document.createElement("section");
+  section.className = "appointment-procedures";
+  const title = document.createElement("span");
+  title.className = "appointment-procedures-title";
+  title.textContent = "Procedimentos";
+  const list = document.createElement("div");
+  list.className = "appointment-procedures-list";
+  items.forEach((procedure) => {
+    const item = document.createElement("article");
+    const service = document.createElement("strong");
+    const professional = document.createElement("span");
+    const time = document.createElement("span");
+    service.textContent = displayValue(procedure.servicoNome);
+    professional.textContent = displayValue(procedure.profissionalNome);
+    time.textContent = `${formatAppointmentItemTime(procedure.startAt)} – ${formatAppointmentItemTime(procedure.endAt)}`;
+    item.append(service, professional, time);
+    list.appendChild(item);
+  });
+  section.append(title, list);
+  return section;
 }
 
 function rpcResultError(data) {
@@ -794,6 +849,7 @@ function renderAgenda(items) {
   }
 
   items.forEach((appointment) => {
+    const procedures = appointmentProcedureItems(appointment);
     const card = document.createElement("article");
     card.className = "appointment-card";
     const heading = document.createElement("div");
@@ -807,14 +863,19 @@ function renderAgenda(items) {
     const details = document.createElement("div");
     details.className = "card-details";
     addDetail(details, "Telefone", appointment.clientePhone);
-    addDetail(details, "Profissional", appointment.profissionalNome);
-    addDetail(details, "Serviço", appointment.servicoNome);
+    if (!procedures.length) {
+      addDetail(details, "Profissional", appointment.profissionalNome);
+      addDetail(details, "Serviço", appointment.servicoNome);
+    }
     addDetail(details, "Data", appointment.dataBr);
     addDetail(details, "Horário", `${displayValue(appointment.horaInicio)} – ${displayValue(appointment.horaFim)}`);
     addDetail(details, "Total", appointment.totalPrice);
     addDetail(details, "Depósito", appointment.depositStatus);
     addDetail(details, "Pagamento", appointment.paymentStatus);
-    card.append(heading, details);
+    card.append(heading);
+    const proceduresSection = renderAppointmentProcedures(appointment);
+    if (proceduresSection) card.appendChild(proceduresSection);
+    card.appendChild(details);
     renderCardActions(card, appointment);
     renderWhatsAppAction(card, appointment);
     list.appendChild(card);
@@ -1129,6 +1190,7 @@ async function loadCatalogs() {
   if (currentUserRole === "admin") setupAdminWorkingHoursProfessionals();
   setServiceSelectPlaceholder("Selecione uma profissional primeiro");
   resetAvailableTimes("Selecione uma profissional primeiro.");
+  setupV2ServiceSelect();
 }
 
 function setupProfessionalFilter(selectId) {
@@ -1154,6 +1216,594 @@ function setServiceSelectPlaceholder(text, disabled = true) {
   option.textContent = text;
   select.replaceChildren(option);
   select.disabled = disabled;
+}
+
+function setupV2ServiceSelect() {
+  const select = document.querySelector("#v2-service");
+  if (!select) return;
+  const selectedValue = select.value;
+  select.replaceChildren(new Option("Selecione um procedimento", ""));
+  activeServices
+    .slice()
+    .sort((first, second) => String(first.name || first.nome || "").localeCompare(String(second.name || second.nome || ""), "pt-BR"))
+    .forEach((service) => {
+      const option = new Option(
+        `${service.name || service.nome || "Serviço"}${service.category ? ` · ${service.category}` : ""}`,
+        service.id
+      );
+      select.appendChild(option);
+    });
+  if ([...select.options].some((option) => option.value === selectedValue)) select.value = selectedValue;
+}
+
+function normalizedSearchText(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+}
+
+function v2ClientName(client) {
+  return client?.full_name || client?.nome || client?.name || "Cliente";
+}
+
+function selectV2Client(client) {
+  v2SelectedClient = client ? {
+    id: client.id,
+    nome: v2ClientName(client),
+    telefone: client.phone || "",
+    email: client.email || ""
+  } : null;
+  const selected = document.querySelector("#v2-selected-client");
+  selected.replaceChildren();
+  selected.hidden = !v2SelectedClient;
+  if (v2SelectedClient) {
+    const details = document.createElement("div");
+    details.className = "v2-selected-client-details";
+    const name = document.createElement("strong");
+    name.className = "v2-selected-client-name";
+    const phone = document.createElement("span");
+    const email = document.createElement("span");
+    const actions = document.createElement("div");
+    actions.className = "v2-selected-client-actions";
+    const edit = document.createElement("button");
+    const change = document.createElement("button");
+    name.textContent = v2SelectedClient.nome;
+    phone.textContent = `Telefone: ${v2SelectedClient.telefone || "Não informado"}`;
+    email.textContent = `E-mail: ${v2SelectedClient.email || "Não informado — clique em Editar dados para adicionar"}`;
+    if (!v2SelectedClient.email) email.className = "v2-missing-contact";
+    edit.type = "button";
+    edit.className = "button-secondary";
+    edit.textContent = "Editar dados";
+    edit.addEventListener("click", editV2SelectedClient);
+    change.type = "button";
+    change.className = "button-secondary";
+    change.textContent = "Trocar cliente";
+    change.addEventListener("click", () => {
+      selectV2Client(null);
+      document.querySelector("#v2-client-search").focus();
+    });
+    details.append(name, phone, email);
+    actions.append(edit, change);
+    selected.append(details, actions);
+    document.querySelector("#v2-client-results").replaceChildren();
+    document.querySelector("#v2-client-search").value = "";
+  }
+  clearV2Availability();
+  renderV2Summary();
+}
+
+async function editV2SelectedClient() {
+  if (!v2SelectedClient?.id) return;
+  const { data, error } = await supabaseClient
+    .from("clientes")
+    .select("*")
+    .eq("id", v2SelectedClient.id)
+    .single();
+  if (error) {
+    showMessage(document.querySelector("#v2-appointment-message"), readableError(error, "Não foi possível carregar os dados da cliente."));
+    return;
+  }
+  v2ClientRegistrationPending = true;
+  await openRegistrationModal("client", data);
+}
+
+async function renderV2ClientResults() {
+  const container = document.querySelector("#v2-client-results");
+  const rawSearch = document.querySelector("#v2-client-search").value.trim();
+  const search = normalizedSearchText(rawSearch);
+  const requestId = ++v2ClientSearchRequestId;
+  container.replaceChildren();
+  if (search.length < 2) return;
+  const safeSearch = rawSearch.replace(/[,()]/g, " ");
+  const { data, error } = await supabaseClient
+    .from("clientes")
+    .select("id, full_name, phone, email")
+    .or(`full_name.ilike.%${safeSearch}%,phone.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
+    .order("full_name")
+    .limit(8);
+  if (requestId !== v2ClientSearchRequestId) return;
+  if (error) {
+    showMessage(document.querySelector("#v2-appointment-message"), readableError(error, "Não foi possível buscar clientes."));
+    return;
+  }
+  const matches = data || [];
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Nenhuma cliente encontrada. Cadastre uma nova cliente para continuar.";
+    container.appendChild(empty);
+    return;
+  }
+  matches.forEach((client) => {
+    const button = document.createElement("button");
+    const name = document.createElement("strong");
+    const contact = document.createElement("span");
+    button.type = "button";
+    button.className = "v2-client-result";
+    name.textContent = v2ClientName(client);
+    contact.textContent = [client.phone, client.email].filter(Boolean).join(" · ") || "Sem contato informado";
+    button.append(name, contact);
+    button.addEventListener("click", () => selectV2Client(client));
+    container.appendChild(button);
+  });
+}
+
+function v2PreferredProfessional(category, professionals) {
+  const normalizedCategory = normalizedSearchText(category);
+  const preferredPattern = /unha|manicure|pedicure|nail/.test(normalizedCategory)
+    ? /celyne/
+    : /olho|cilio|sobrancelha|lash|brow/.test(normalizedCategory)
+      ? /viviane/
+      : /corpo|quiroprax|massag|ventosa|acupunt|estetic/.test(normalizedCategory)
+        ? /leonardo/
+        : null;
+  if (!preferredPattern) return null;
+  return professionals.find((professional) => preferredPattern.test(normalizedSearchText(professional.name || professional.nome))) || null;
+}
+
+async function loadV2ProfessionalsForService(serviceId) {
+  const { data, error } = await supabaseClient
+    .from("profissional_servicos")
+    .select("profissional_id, profissionais!inner(id, name, specialty, active)")
+    .eq("servico_id", serviceId)
+    .eq("active", true)
+    .eq("profissionais.active", true);
+  if (error) throw error;
+  const unique = new Map();
+  (data || []).forEach((link) => {
+    const professional = Array.isArray(link.profissionais) ? link.profissionais[0] : link.profissionais;
+    if (professional?.id) unique.set(professional.id, professional);
+  });
+  return [...unique.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR"));
+}
+
+function invalidateV2Sequence() {
+  clearV2Availability();
+  renderV2Procedures();
+  renderV2Summary();
+}
+
+async function addV2Procedure() {
+  if (v2Procedures.length >= 10) {
+    showMessage(document.querySelector("#v2-appointment-message"), "O limite é de 10 procedimentos por agendamento.");
+    return;
+  }
+  const serviceId = document.querySelector("#v2-service").value;
+  const service = activeServices.find((item) => String(item.id) === String(serviceId));
+  if (!service) {
+    showMessage(document.querySelector("#v2-appointment-message"), "Selecione um procedimento para adicionar.");
+    return;
+  }
+  const button = document.querySelector("#v2-add-procedure");
+  setBusy(button, true, "Adicionando...");
+  showMessage(document.querySelector("#v2-appointment-message"), "");
+  try {
+    const professionals = await loadV2ProfessionalsForService(service.id);
+    if (!professionals.length) throw new Error("Nenhuma profissional ativa realiza este procedimento.");
+    const preferred = v2PreferredProfessional(service.category, professionals);
+    v2Procedures.push({
+      servico_id: service.id,
+      nome: service.name || service.nome || "Serviço",
+      categoria: service.category || service.categoria || "",
+      valor: Number(service.price),
+      duracao: Number(service.duration_minutes),
+      profissional_id: preferred?.id || professionals[0].id,
+      professionals
+    });
+    document.querySelector("#v2-service").value = "";
+    invalidateV2Sequence();
+  } catch (error) {
+    showMessage(document.querySelector("#v2-appointment-message"), readableError(error, "Não foi possível adicionar o procedimento."));
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+function renderV2Procedures() {
+  const container = document.querySelector("#v2-procedure-list");
+  container.replaceChildren();
+  if (!v2Procedures.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "Nenhum procedimento adicionado.";
+    container.appendChild(empty);
+  }
+  v2Procedures.forEach((procedure, index) => {
+    const card = document.createElement("article");
+    card.className = "v2-procedure-card";
+    const order = document.createElement("span");
+    order.className = "v2-procedure-order";
+    order.textContent = String(index + 1);
+    const info = document.createElement("div");
+    info.className = "v2-procedure-info";
+    const name = document.createElement("strong");
+    const meta = document.createElement("span");
+    name.textContent = procedure.nome;
+    meta.textContent = `${procedure.categoria || "Sem categoria"} · ${Number.isFinite(procedure.duracao) ? procedure.duracao : 0} min`;
+    info.append(name, meta);
+    const professionalLabel = document.createElement("label");
+    professionalLabel.textContent = "Profissional";
+    const select = document.createElement("select");
+    procedure.professionals.forEach((professional) => select.appendChild(new Option(professional.name || professional.nome || "Profissional", professional.id)));
+    select.value = procedure.profissional_id;
+    select.addEventListener("change", () => {
+      procedure.profissional_id = select.value;
+      clearV2Availability();
+      renderV2Summary();
+    });
+    professionalLabel.appendChild(select);
+    const actions = document.createElement("div");
+    actions.className = "v2-procedure-actions";
+    [["↑", -1, "Mover para cima"], ["↓", 1, "Mover para baixo"]].forEach(([text, offset, label]) => {
+      const move = document.createElement("button");
+      move.type = "button";
+      move.className = "button-secondary";
+      move.textContent = text;
+      move.title = label;
+      move.setAttribute("aria-label", label);
+      move.disabled = index + offset < 0 || index + offset >= v2Procedures.length;
+      move.addEventListener("click", () => {
+        const target = index + offset;
+        [v2Procedures[index], v2Procedures[target]] = [v2Procedures[target], v2Procedures[index]];
+        invalidateV2Sequence();
+      });
+      actions.appendChild(move);
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "v2-remove-procedure";
+    remove.textContent = "Remover";
+    remove.addEventListener("click", () => {
+      v2Procedures.splice(index, 1);
+      invalidateV2Sequence();
+    });
+    actions.appendChild(remove);
+    card.append(order, info, professionalLabel, actions);
+    container.appendChild(card);
+  });
+  const totalDuration = v2Procedures.reduce((sum, item) => sum + (Number.isFinite(item.duracao) ? item.duracao : 0), 0);
+  const totalPrice = v2Procedures.reduce((sum, item) => sum + (Number.isFinite(item.valor) ? item.valor : 0), 0);
+  document.querySelector("#v2-total-duration").textContent = `${totalDuration} min`;
+  document.querySelector("#v2-total-price").textContent = formatCurrency(totalPrice);
+}
+
+function clearV2Availability(message = "Selecione cliente, procedimentos, profissionais e data.") {
+  v2AvailabilityRequestId += 1;
+  document.querySelector("#v2-selected-time").value = "";
+  document.querySelector("#v2-selected-time-label").textContent = "";
+  document.querySelector("#v2-selected-time-summary").hidden = true;
+  const container = document.querySelector("#v2-available-times");
+  container.hidden = false;
+  container.replaceChildren();
+  if (message) {
+    const hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = message;
+    container.appendChild(hint);
+  }
+  updateV2CreateButton();
+}
+
+function renderV2Times(items) {
+  const container = document.querySelector("#v2-available-times");
+  container.replaceChildren();
+  const times = (items || []).map(normalizeTime).filter(Boolean);
+  if (!times.length) {
+    const empty = document.createElement("span");
+    empty.className = "muted";
+    empty.textContent = "Nenhum horário inicial disponível para esta data.";
+    container.appendChild(empty);
+    return;
+  }
+  times.forEach((time) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "time-button";
+    button.textContent = time;
+    button.addEventListener("click", () => {
+      document.querySelector("#v2-selected-time").value = time;
+      document.querySelector("#v2-selected-time-label").textContent = `Horário inicial: ${time}`;
+      container.hidden = true;
+      document.querySelector("#v2-selected-time-summary").hidden = false;
+      updateV2CreateButton();
+      renderV2Summary();
+    });
+    container.appendChild(button);
+  });
+}
+
+async function searchV2AvailableTimes() {
+  const first = v2Procedures[0];
+  const date = document.querySelector("#v2-appointment-date").value;
+  if (!v2SelectedClient || !first || v2Procedures.some((item) => !item.profissional_id) || !date) {
+    showMessage(document.querySelector("#v2-appointment-message"), "Selecione cliente, procedimentos, profissionais e data.");
+    return;
+  }
+  document.querySelector("#v2-selected-time").value = "";
+  document.querySelector("#v2-selected-time-summary").hidden = true;
+  updateV2CreateButton();
+  const requestId = ++v2AvailabilityRequestId;
+  const button = document.querySelector("#v2-search-times");
+  setBusy(button, true, "Buscando...");
+  showMessage(document.querySelector("#v2-appointment-message"), "");
+  try {
+    const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis", {
+      p_profissional_id: first.profissional_id,
+      p_servico_id: first.servico_id,
+      p_data: date,
+      p_intervalo_minutos: 30
+    });
+    if (error) throw error;
+    if (requestId !== v2AvailabilityRequestId) return;
+    renderV2Times(data);
+  } catch (error) {
+    if (requestId !== v2AvailabilityRequestId) return;
+    clearV2Availability("Não foi possível carregar os horários iniciais.");
+    showMessage(document.querySelector("#v2-appointment-message"), readableError(error, "Não foi possível buscar horários."));
+  } finally {
+    setBusy(button, false, "");
+  }
+}
+
+function updateV2CreateButton() {
+  const ready = Boolean(v2SelectedClient?.id)
+    && v2Procedures.length > 0
+    && v2Procedures.every((item) => item.profissional_id)
+    && Boolean(document.querySelector("#v2-appointment-date").value)
+    && Boolean(document.querySelector("#v2-selected-time").value);
+  document.querySelector("#v2-create-button").disabled = !ready;
+}
+
+function formatV2Date(value) {
+  if (!value) return "Selecione uma data";
+  const [year, month, day] = value.split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return "Selecione uma data";
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo"
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+function renderV2FormattedDate(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  const isValid = [year, month, day].every(Number.isFinite);
+  const date = isValid ? new Date(Date.UTC(year, month - 1, day, 12)) : null;
+  const weekday = document.querySelector("#v2-date-weekday");
+  const fullDate = document.querySelector("#v2-date-full");
+
+  if (!date) {
+    weekday.textContent = "Selecione uma data";
+    fullDate.textContent = "";
+    return;
+  }
+
+  weekday.textContent = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    timeZone: "America/Sao_Paulo"
+  }).format(date);
+  fullDate.textContent = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo"
+  }).format(date);
+}
+
+function shiftV2Date(value, days) {
+  const [year, month, day] = String(value || todayInSaoPaulo()).split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days, 12));
+  return shifted.toISOString().slice(0, 10);
+}
+
+function setV2Date(value, invalidate = true) {
+  const input = document.querySelector("#v2-appointment-date");
+  const today = todayInSaoPaulo();
+  const safeValue = value && value >= today ? value : today;
+  input.min = today;
+  input.value = safeValue;
+  renderV2FormattedDate(safeValue);
+  document.querySelector("#v2-date-previous").disabled = safeValue <= today;
+  if (invalidate) clearV2Availability("Clique em Buscar horários iniciais para ver a disponibilidade.");
+  renderV2Summary();
+}
+
+function openV2DatePicker() {
+  const input = document.querySelector("#v2-appointment-date");
+  input.min = todayInSaoPaulo();
+
+  if (typeof input.showPicker === "function") {
+    try {
+      input.showPicker();
+      return;
+    } catch (error) {
+      // Navegadores sem suporte completo seguem para o acionamento por clique.
+    }
+  }
+
+  input.focus({ preventScroll: true });
+  input.click();
+}
+
+function v2TimeFromMinutes(totalMinutes) {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+}
+
+function renderV2Summary() {
+  const container = document.querySelector("#v2-booking-summary");
+  container.replaceChildren();
+  if (!v2SelectedClient || !v2Procedures.length) {
+    const hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = "Complete as etapas anteriores.";
+    container.appendChild(hint);
+    updateV2CreateButton();
+    return;
+  }
+  const clientBlock = document.createElement("div");
+  clientBlock.className = "v2-summary-client";
+  const clientLabel = document.createElement("span");
+  const client = document.createElement("strong");
+  clientLabel.textContent = "Cliente";
+  client.textContent = v2SelectedClient.nome;
+  clientBlock.append(clientLabel, client);
+  container.appendChild(clientBlock);
+
+  const proceduresTitle = document.createElement("span");
+  proceduresTitle.className = "v2-summary-section-title";
+  proceduresTitle.textContent = "Procedimentos";
+  container.appendChild(proceduresTitle);
+  const list = document.createElement("div");
+  list.className = "v2-summary-procedures";
+  const selectedTime = document.querySelector("#v2-selected-time").value;
+  const [selectedHour, selectedMinute] = selectedTime.split(":").map(Number);
+  const hasValidTime = Number.isFinite(selectedHour) && Number.isFinite(selectedMinute);
+  let elapsedMinutes = 0;
+  v2Procedures.forEach((procedure, index) => {
+    const professional = procedure.professionals.find((item) => String(item.id) === String(procedure.profissional_id));
+    const item = document.createElement("article");
+    const order = document.createElement("span");
+    const details = document.createElement("div");
+    const service = document.createElement("strong");
+    const professionalName = document.createElement("span");
+    const duration = document.createElement("span");
+    order.className = "v2-summary-order";
+    order.textContent = String(index + 1);
+    service.textContent = procedure.nome;
+    professionalName.textContent = professional?.name || "Selecione a profissional";
+    const procedureDuration = Number.isFinite(procedure.duracao) ? procedure.duracao : 0;
+    const itemStart = hasValidTime ? selectedHour * 60 + selectedMinute + elapsedMinutes : null;
+    const itemEnd = itemStart === null ? null : itemStart + procedureDuration;
+    duration.textContent = itemStart === null
+      ? `${procedureDuration} minutos`
+      : `${v2TimeFromMinutes(itemStart)}–${v2TimeFromMinutes(itemEnd)} · ${procedureDuration} minutos`;
+    elapsedMinutes += procedureDuration;
+    details.append(service, professionalName, duration);
+    item.append(order, details);
+    list.appendChild(item);
+  });
+  container.appendChild(list);
+
+  const totals = document.createElement("div");
+  totals.className = "v2-summary-totals";
+  const date = document.querySelector("#v2-appointment-date").value;
+  const totalDuration = v2Procedures.reduce((sum, item) => sum + (Number.isFinite(item.duracao) ? item.duracao : 0), 0);
+  const totalPrice = v2Procedures.reduce((sum, item) => sum + (Number.isFinite(item.valor) ? item.valor : 0), 0);
+  const startMinutes = hasValidTime ? selectedHour * 60 + selectedMinute : null;
+  const summaryValues = [
+    ["Data", date ? formatV2Date(date) : "Não selecionada"],
+    ["Horário inicial", hasValidTime ? selectedTime : "Não selecionado"],
+    ["Horário final", startMinutes === null ? "Não calculado" : v2TimeFromMinutes(startMinutes + totalDuration)],
+    ["Valor total estimado", formatCurrency(totalPrice)]
+  ];
+  summaryValues.forEach(([labelText, valueText]) => {
+    const field = document.createElement("div");
+    const label = document.createElement("span");
+    const value = document.createElement("strong");
+    label.textContent = labelText;
+    value.textContent = valueText;
+    field.append(label, value);
+    totals.appendChild(field);
+  });
+  container.appendChild(totals);
+  updateV2CreateButton();
+}
+
+function resetV2AppointmentForm() {
+  window.clearTimeout(v2ClientSearchTimeout);
+  v2ClientSearchRequestId += 1;
+  v2SelectedClient = null;
+  v2Procedures = [];
+  v2ClientRegistrationPending = false;
+  document.querySelector("#v2-appointment-form").reset();
+  setV2Date(todayInSaoPaulo(), false);
+  document.querySelector("#v2-client-results").replaceChildren();
+  document.querySelector("#v2-selected-client").replaceChildren();
+  document.querySelector("#v2-selected-client").hidden = true;
+  showMessage(document.querySelector("#v2-appointment-message"), "");
+  setupV2ServiceSelect();
+  renderV2Procedures();
+  clearV2Availability();
+  renderV2Summary();
+}
+
+function setAppointmentFlow(version) {
+  const useV2 = version === "v2";
+  document.querySelector("#v2-appointment-panel").hidden = !useV2;
+  document.querySelector("#legacy-appointment-panel").hidden = useV2;
+  document.querySelector("#use-v2-appointment").classList.toggle("is-active", useV2);
+  document.querySelector("#use-legacy-appointment").classList.toggle("is-active", !useV2);
+  document.querySelector("#use-v2-appointment").setAttribute("aria-pressed", String(useV2));
+  document.querySelector("#use-legacy-appointment").setAttribute("aria-pressed", String(!useV2));
+  if (useV2) resetV2AppointmentForm();
+  else resetNewAppointmentForm();
+}
+
+async function createV2Appointment(event) {
+  event.preventDefault();
+  updateV2CreateButton();
+  const button = document.querySelector("#v2-create-button");
+  if (button.disabled) {
+    showMessage(document.querySelector("#v2-appointment-message"), "Complete todas as etapas antes de criar o agendamento.");
+    return;
+  }
+  const date = document.querySelector("#v2-appointment-date").value;
+  const time = document.querySelector("#v2-selected-time").value;
+  setBusy(button, true, "Criando...");
+  showMessage(document.querySelector("#v2-appointment-message"), "");
+  try {
+    const { data, error } = await supabaseClient.rpc("solicitar_agendamento_recepcao_v2", {
+      p_cliente_id: v2SelectedClient.id,
+      p_start_at: buildSaoPauloTimestamp(date, time),
+      p_itens: v2Procedures.map((item, index) => ({
+        servico_id: item.servico_id,
+        profissional_id: item.profissional_id,
+        ordem: index + 1
+      })),
+      p_cliente_nome: null,
+      p_cliente_phone: null,
+      p_cliente_email: null,
+      p_appointment_type: "normal",
+      p_requires_deposit_override: null,
+      p_deposit_percent_override: null,
+      p_notes: document.querySelector("#v2-appointment-notes").value.trim() || null
+    });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    if (result?.success !== true) throw new Error(result?.message || "Não foi possível criar o agendamento.");
+    showToast("Agendamento com procedimentos criado com sucesso!", "success");
+    resetV2AppointmentForm();
+    document.querySelector("#data-inicio").value = date;
+    document.querySelector("#data-fim").value = date;
+    showSection("agenda");
+    await loadAgenda();
+  } catch (error) {
+    showMessage(document.querySelector("#v2-appointment-message"), readableError(error, "Não foi possível criar o agendamento."));
+  } finally {
+    setBusy(button, false, "");
+    updateV2CreateButton();
+  }
 }
 
 function resetNewAppointmentForm() {
@@ -1900,6 +2550,7 @@ function closeRegistrationModal() {
   registrationModal.hidden = true;
   document.body.classList.remove("modal-open");
   registrationState = null;
+  v2ClientRegistrationPending = false;
   showMessage(registrationMessage, "");
 }
 
@@ -2014,11 +2665,15 @@ async function saveRegistration(event) {
       saved = data;
     }
     registrationState.item = saved;
+    const selectSavedClientForV2 = type === "client" && v2ClientRegistrationPending;
     if (type === "professional") await syncProfessionalServices(saved.id);
 
     registrationSaving = false;
     closeRegistrationModal();
-    if (type === "client") await loadClients();
+    if (type === "client") {
+      await loadClients();
+      if (selectSavedClientForV2) selectV2Client(saved);
+    }
     else {
       await refreshActiveCatalogs();
       if (type === "professional") await loadProfessionalsManagement();
@@ -2118,6 +2773,10 @@ async function loadStudioSettings() {
     setSettingsValue("#settings-interval", data.appointment_interval_minutes);
     document.querySelector("#settings-requires-deposit").checked = Boolean(data.requires_deposit_default);
     setSettingsValue("#settings-deposit-percent", data.default_deposit_percent ?? 0);
+    setSettingsValue("#settings-debit-card-fee", data.debit_card_fee_percent);
+    setSettingsValue("#settings-credit-card-fee", data.credit_card_fee_percent);
+    setSettingsValue("#settings-pix-machine-fee", data.pix_machine_fee_percent);
+    setSettingsValue("#settings-pix-qr-code-fee", data.pix_qr_code_fee_percent);
     setSettingsValue("#settings-confirmation-message", data.confirmation_message_template);
     setSettingsValue("#settings-cancellation-message", data.cancellation_message_template);
     setSettingsValue("#settings-no-show-message", data.no_show_message_template);
@@ -2151,6 +2810,12 @@ async function saveStudioSettings(event) {
   const closeTime = document.querySelector("#settings-close-time").value;
   const interval = Number(document.querySelector("#settings-interval").value);
   const depositPercent = Number(document.querySelector("#settings-deposit-percent").value || 0);
+  const paymentFees = {
+    debit_card_fee_percent: Number(document.querySelector("#settings-debit-card-fee").value),
+    credit_card_fee_percent: Number(document.querySelector("#settings-credit-card-fee").value),
+    pix_machine_fee_percent: Number(document.querySelector("#settings-pix-machine-fee").value),
+    pix_qr_code_fee_percent: Number(document.querySelector("#settings-pix-qr-code-fee").value)
+  };
   if (!studioName) return showToast("Informe o nome do studio.", "error");
   if (!openTime || !closeTime || closeTime <= openTime) {
     return showToast("O horário de fechamento deve ser maior que o horário de abertura.", "error");
@@ -2158,6 +2823,9 @@ async function saveStudioSettings(event) {
   if (!Number.isFinite(interval) || interval <= 0) return showToast("O intervalo deve ser maior que zero.", "error");
   if (!Number.isFinite(depositPercent) || depositPercent < 0 || depositPercent > 100) {
     return showToast("O percentual de sinal deve ficar entre 0 e 100.", "error");
+  }
+  if (Object.values(paymentFees).some((fee) => !Number.isFinite(fee) || fee < 0 || fee > 100)) {
+    return showToast("As taxas de pagamento devem ficar entre 0 e 100.", "error");
   }
 
   const closedWeekdays = [...document.querySelectorAll('input[name="closed-weekday"]:checked')]
@@ -2174,6 +2842,7 @@ async function saveStudioSettings(event) {
     appointment_interval_minutes: interval,
     requires_deposit_default: document.querySelector("#settings-requires-deposit").checked,
     default_deposit_percent: depositPercent,
+    ...paymentFees,
     confirmation_message_template: optionalValue("#settings-confirmation-message"),
     cancellation_message_template: optionalValue("#settings-cancellation-message"),
     no_show_message_template: optionalValue("#settings-no-show-message"),
@@ -2220,9 +2889,11 @@ function renderFinanceCards(resumo = {}) {
   const totalCanceled = numberValue(resumo.totalCanceladoCliente)
     + numberValue(resumo.totalCanceladoStudio);
   const cards = [
-    ["Total recebido", resumo.totalRecebido, true],
-    ["Receita concluída", resumo.receitaBrutaConcluida, true],
-    ["Pendente", resumo.totalPendentePagamento, true],
+    ["Receita bruta dos serviços", resumo.receitaBrutaConcluida, true],
+    ["Recebido bruto", resumo.totalRecebido, true],
+    ["Taxas de pagamento", resumo.totalTaxasPagamento, true],
+    ["Recebido líquido", resumo.totalRecebidoLiquido, true],
+    ["Valores pendentes", resumo.totalPendentePagamento, true],
     ["Sinais pendentes", resumo.totalSinalPendente, true],
     ["Ticket médio", resumo.ticketMedioConcluido, true],
     ["Agendamentos", resumo.totalAgendamentos],
@@ -2269,7 +2940,10 @@ function mergeProfessionalsWithFinanceSummary(porProfissional, selectedProfessio
     totalNaoCompareceu: 0,
     totalCancelados: 0,
     receitaBrutaConcluida: 0,
-    totalRecebido: 0
+    totalRecebido: 0,
+    totalTaxasPagamento: 0,
+    totalRecebidoLiquido: 0,
+    totalPendentePagamento: 0
   });
 }
 
@@ -2342,9 +3016,15 @@ function createMovementMobileList(items) {
       createCompactMobileField("Forma", item.paymentMethod),
       createCompactMobileField("Total", formatCurrency(item.totalPrice), true),
       createCompactMobileField("Pago", formatCurrency(item.amountPaid), true),
+      createCompactMobileField("Taxa", formatCurrency(item.paymentFeeAmount), true),
+      createCompactMobileField("Líquido", formatCurrency(item.netAmountReceived), true),
+      createCompactMobileField("Pendente", formatCurrency(item.pendingAmount), true),
       createCompactMobileField("Status pag.", item.paymentStatus)
     );
-    card.append(heading, grid);
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+    appendPaymentCorrectionActions(actions, item);
+    card.append(heading, grid, actions);
     list.appendChild(card);
   });
   return list;
@@ -2384,9 +3064,14 @@ function createFinanceTable(title, columns, rows) {
     const tableRow = document.createElement("tr");
     columns.forEach((column) => {
       const cell = document.createElement("td");
-      const rawValue = typeof column.value === "function" ? column.value(row) : row[column.value];
-      cell.textContent = column.currency ? formatCurrency(rawValue) : displayValue(rawValue);
-      if (column.currency) cell.className = "finance-money";
+      if (column.paymentActions) {
+        cell.className = "table-actions";
+        appendPaymentCorrectionActions(cell, row);
+      } else {
+        const rawValue = typeof column.value === "function" ? column.value(row) : row[column.value];
+        cell.textContent = column.currency ? formatCurrency(rawValue) : displayValue(rawValue);
+        if (column.currency) cell.className = "finance-money";
+      }
       tableRow.appendChild(cell);
     });
     body.appendChild(tableRow);
@@ -2400,6 +3085,84 @@ function createFinanceTable(title, columns, rows) {
   return section;
 }
 
+function closePaymentCorrectionModal() {
+  if (paymentCorrectionSaving) return;
+  paymentCorrectionModal.hidden = true;
+  paymentCorrectionAppointment = null;
+  paymentCorrectionForm.reset();
+  showMessage(paymentCorrectionMessage, "");
+  document.body.classList.remove("modal-open");
+}
+
+function openPaymentCorrectionModal(item, markAsPaid = false) {
+  paymentCorrectionAppointment = item;
+  const details = document.querySelector("#payment-correction-current");
+  details.replaceChildren();
+  [["Serviço", item.servicoNome], ["Valor do serviço", formatCurrency(item.totalPrice)], ["Valor recebido atual", formatCurrency(item.amountRegistered ?? item.amountPaid)], ["Forma atual", item.paymentMethod], ["Taxa atual", formatCurrency(item.paymentFeeAmount)], ["Valor líquido atual", formatCurrency(item.netAmountReceived)]].forEach(([labelText, valueText]) => {
+    const field = document.createElement("div");
+    const label = document.createElement("span");
+    const value = document.createElement("strong");
+    label.textContent = labelText;
+    value.textContent = displayValue(valueText);
+    field.append(label, value);
+    details.appendChild(field);
+  });
+  const currentAmount = Number(item.amountRegistered ?? item.amountPaid ?? 0);
+  const suggestedAmount = markAsPaid && currentAmount <= 0 ? Number(item.totalPrice || 0) : currentAmount;
+  document.querySelector("#payment-correction-amount").value = suggestedAmount.toFixed(2).replace(".", ",");
+  const method = document.querySelector("#payment-correction-method");
+  method.value = item.paymentMethod === "Pix" ? "Pix QR Code da loja" : (item.paymentMethod || "Dinheiro");
+  paymentCorrectionModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function appendPaymentCorrectionActions(container, item) {
+  if (item.status !== "concluido") return;
+  const correctionButton = document.createElement("button");
+  correctionButton.type = "button";
+  correctionButton.className = "table-action-button";
+  correctionButton.textContent = "Corrigir pagamento";
+  correctionButton.addEventListener("click", () => openPaymentCorrectionModal(item));
+  container.appendChild(correctionButton);
+  if (item.paymentStatus !== "pago") {
+    const paidButton = document.createElement("button");
+    paidButton.type = "button";
+    paidButton.className = "table-action-button management-enable-button";
+    paidButton.textContent = "Marcar como pago";
+    paidButton.addEventListener("click", () => openPaymentCorrectionModal(item, true));
+    container.appendChild(paidButton);
+  }
+}
+
+async function savePaymentCorrection(event) {
+  event.preventDefault();
+  if (!paymentCorrectionAppointment || paymentCorrectionSaving || currentUserRole !== "admin") return;
+  const amount = normalizeAmount(document.querySelector("#payment-correction-amount").value);
+  const method = document.querySelector("#payment-correction-method").value;
+  const reason = document.querySelector("#payment-correction-reason").value.trim();
+  if (!Number.isFinite(amount) || amount < 0) return showMessage(paymentCorrectionMessage, "Informe um valor recebido válido.");
+  if (reason.length < 5) return showMessage(paymentCorrectionMessage, "Informe o motivo da correção.");
+  paymentCorrectionSaving = true;
+  const button = document.querySelector("#save-payment-correction");
+  setBusy(button, true, "Salvando...");
+  try {
+    const { data, error } = await supabaseClient.rpc("corrigir_pagamento_admin", { p_agendamento_id: paymentCorrectionAppointment.id, p_valor_recebido: amount, p_forma_pagamento: method, p_motivo: reason });
+    if (error) throw error;
+    const result = Array.isArray(data) ? data[0] : data;
+    const resultError = rpcResultError(result);
+    if (resultError) throw resultError;
+    paymentCorrectionSaving = false;
+    closePaymentCorrectionModal();
+    await loadFinancialSummary();
+    showToast("Pagamento corrigido. A comissão não foi alterada.", "success");
+  } catch (error) {
+    showMessage(paymentCorrectionMessage, readableError(error, "Não foi possível corrigir o pagamento."));
+  } finally {
+    paymentCorrectionSaving = false;
+    setBusy(button, false, "");
+  }
+}
+
 function renderFinanceTables(data) {
   const content = document.querySelector("#finance-content");
   const selectedProfessionalId = document.querySelector("#finance-professional").value || null;
@@ -2411,6 +3174,8 @@ function renderFinanceTables(data) {
     { label: "Forma", value: "formaPagamento" },
     { label: "Quantidade", value: "quantidade" },
     { label: "Total recebido", value: "totalRecebido", currency: true }
+    ,{ label: "Taxas", value: "totalTaxasPagamento", currency: true }
+    ,{ label: "Líquido", value: "totalRecebidoLiquido", currency: true }
   ], data.porPagamento));
 
   content.appendChild(createFinanceTable("Por profissional", [
@@ -2419,6 +3184,9 @@ function renderFinanceTables(data) {
     { label: "Concluídos", value: "totalConcluidos" },
     { label: "Receita", value: "receitaBrutaConcluida", currency: true },
     { label: "Recebido", value: "totalRecebido", currency: true }
+    ,{ label: "Taxas", value: "totalTaxasPagamento", currency: true }
+    ,{ label: "Líquido", value: "totalRecebidoLiquido", currency: true }
+    ,{ label: "Pendente", value: "totalPendentePagamento", currency: true }
   ], professionalsSummary));
 
   content.appendChild(createFinanceTable("Por serviço", [
@@ -2428,6 +3196,9 @@ function renderFinanceTables(data) {
     { label: "Concluídos", value: "totalConcluidos" },
     { label: "Receita", value: "receitaBrutaConcluida", currency: true },
     { label: "Recebido", value: "totalRecebido", currency: true }
+    ,{ label: "Taxas", value: "totalTaxasPagamento", currency: true }
+    ,{ label: "Líquido", value: "totalRecebidoLiquido", currency: true }
+    ,{ label: "Pendente", value: "totalPendentePagamento", currency: true }
   ], data.porServico));
 
   content.appendChild(createFinanceTable("Movimentações do período", [
@@ -2438,8 +3209,12 @@ function renderFinanceTables(data) {
     { label: "Status", value: "status" },
     { label: "Total", value: "totalPrice", currency: true },
     { label: "Pago", value: "amountPaid", currency: true },
+    { label: "Taxa", value: "paymentFeeAmount", currency: true },
+    { label: "Líquido", value: "netAmountReceived", currency: true },
+    { label: "Pendente", value: "pendingAmount", currency: true },
     { label: "Status pag.", value: "paymentStatus" },
     { label: "Forma", value: "paymentMethod" }
+    ,{ label: "Ações", paymentActions: true }
   ], data.items));
 }
 
@@ -2871,11 +3646,45 @@ document.querySelector("#appointment-date").addEventListener("change", () => {
   resetAvailableTimes("Clique em Buscar horários para ver a disponibilidade.");
 });
 document.querySelector("#change-selected-time").addEventListener("click", reopenAvailableTimes);
+document.querySelector("#use-v2-appointment").addEventListener("click", () => setAppointmentFlow("v2"));
+document.querySelector("#use-legacy-appointment").addEventListener("click", () => setAppointmentFlow("legacy"));
+document.querySelector("#v2-client-search").addEventListener("input", () => {
+  window.clearTimeout(v2ClientSearchTimeout);
+  v2ClientSearchTimeout = window.setTimeout(renderV2ClientResults, 250);
+});
+document.querySelector("#v2-new-client").addEventListener("click", () => {
+  v2ClientRegistrationPending = true;
+  openRegistrationModal("client");
+});
+document.querySelector("#v2-add-procedure").addEventListener("click", addV2Procedure);
+document.querySelector("#v2-search-times").addEventListener("click", searchV2AvailableTimes);
+document.querySelector("#v2-appointment-date").addEventListener("change", () => {
+  setV2Date(document.querySelector("#v2-appointment-date").value);
+});
+document.querySelector("#v2-date-previous").addEventListener("click", () => setV2Date(
+  shiftV2Date(document.querySelector("#v2-appointment-date").value, -1)
+));
+document.querySelector("#v2-date-today").addEventListener("click", () => setV2Date(todayInSaoPaulo()));
+document.querySelector("#v2-date-next").addEventListener("click", () => setV2Date(
+  shiftV2Date(document.querySelector("#v2-appointment-date").value, 1)
+));
+document.querySelector("#v2-date-calendar").addEventListener("click", openV2DatePicker);
+document.querySelector("#v2-change-selected-time").addEventListener("click", () => {
+  document.querySelector("#v2-selected-time").value = "";
+  document.querySelector("#v2-available-times").hidden = false;
+  document.querySelector("#v2-selected-time-summary").hidden = true;
+  updateV2CreateButton();
+  renderV2Summary();
+});
+document.querySelector("#v2-appointment-form").addEventListener("submit", createV2Appointment);
 document.querySelector("#finance-form").addEventListener("submit", loadFinancialSummary);
 document.querySelector("#commissions-form").addEventListener("submit", loadCommissions);
 document.querySelector("#generate-commissions-button").addEventListener("click", generateCommissions);
 document.querySelector("#clients-search-form").addEventListener("submit", loadClients);
-document.querySelector("#new-client-button").addEventListener("click", () => openRegistrationModal("client"));
+document.querySelector("#new-client-button").addEventListener("click", () => {
+  v2ClientRegistrationPending = false;
+  openRegistrationModal("client");
+});
 document.querySelector("#new-professional-button").addEventListener("click", () => openRegistrationModal("professional"));
 document.querySelector("#new-service-button").addEventListener("click", () => openRegistrationModal("service"));
 document.querySelector("#working-hours-professional").addEventListener("change", loadAdminWorkingHours);
@@ -2904,6 +3713,12 @@ cancelCommissionAdjustButton.addEventListener("click", closeCommissionAdjustModa
 closeCommissionAdjustButton.addEventListener("click", closeCommissionAdjustModal);
 commissionAdjustModal.addEventListener("click", (event) => {
   if (event.target === commissionAdjustModal) closeCommissionAdjustModal();
+});
+paymentCorrectionForm.addEventListener("submit", savePaymentCorrection);
+document.querySelector("#cancel-payment-correction").addEventListener("click", closePaymentCorrectionModal);
+document.querySelector("#close-payment-correction").addEventListener("click", closePaymentCorrectionModal);
+paymentCorrectionModal.addEventListener("click", (event) => {
+  if (event.target === paymentCorrectionModal) closePaymentCorrectionModal();
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !commissionAdjustModal.hidden) closeCommissionAdjustModal();

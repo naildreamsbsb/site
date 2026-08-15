@@ -161,6 +161,18 @@
         </fieldset>
 
         <fieldset class="settings-group">
+          <legend>Taxas de pagamento</legend>
+          <p class="template-help">Informe os percentuais cobrados por cada meio de pagamento. O Pix por QR Code impresso da loja não possui taxa.</p>
+          <div class="settings-grid payment-fees-grid">
+            <label>Cartão de débito (%)<input id="settings-debit-card-fee" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
+            <label>Cartão de crédito (%)<input id="settings-credit-card-fee" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
+            <label>Pix pela maquininha (%)<input id="settings-pix-machine-fee" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
+            <label>Pix QR Code da loja (%)<input id="settings-pix-qr-code-fee" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
+          </div>
+          <p class="payment-fees-note">Os valores são armazenados como percentual. Exemplo: <strong>3,51</strong> representa uma taxa de 3,51%.</p>
+        </fieldset>
+
+        <fieldset class="settings-group">
           <legend>Mensagens padrão</legend>
           <p class="template-help">Variáveis disponíveis: <code>{cliente}</code> <code>{studio}</code> <code>{servico}</code> <code>{profissional}</code> <code>{data}</code> <code>{hora}</code> <code>{valor}</code> <code>{valor_sinal}</code> <code>{pix_key}</code></p>
           <div class="settings-messages-grid">
@@ -233,11 +245,85 @@
       <div class="section-heading">
         <div>
           <h2>Novo agendamento</h2>
-          <p>Informe os dados e escolha um horário disponível.</p>
+          <p>Selecione a cliente e monte a sequência de procedimentos.</p>
         </div>
       </div>
-      <p id="appointment-message" class="message" role="alert" aria-live="polite"></p>
-      <form id="appointment-form" class="appointment-form">
+      <div class="appointment-flow-switch" role="group" aria-label="Versão do fluxo de agendamento">
+        <button id="use-v2-appointment" type="button" class="is-active" aria-pressed="true">Novo fluxo</button>
+        <button id="use-legacy-appointment" type="button" class="button-secondary" aria-pressed="false">Fluxo anterior</button>
+      </div>
+
+      <div id="v2-appointment-panel">
+        <p id="v2-appointment-message" class="message" role="alert" aria-live="polite"></p>
+        <form id="v2-appointment-form" class="v2-appointment-form">
+          <section class="booking-step" aria-labelledby="v2-client-title">
+            <div class="booking-step-heading"><span class="booking-step-number">1</span><div><h3 id="v2-client-title">Cliente</h3><p>Busque por nome, telefone ou e-mail.</p></div></div>
+            <div class="v2-client-search-row">
+              <label>Buscar cliente<input id="v2-client-search" type="search" autocomplete="off" placeholder="Digite para buscar"></label>
+              <button id="v2-new-client" type="button" class="button-secondary">Cadastrar nova cliente</button>
+            </div>
+            <div id="v2-client-results" class="v2-client-results"></div>
+            <div id="v2-selected-client" class="v2-selected-client" hidden></div>
+          </section>
+
+          <section class="booking-step" aria-labelledby="v2-procedures-title">
+            <div class="booking-step-heading"><span class="booking-step-number">2</span><div><h3 id="v2-procedures-title">Procedimentos</h3><p>Adicione até 10 procedimentos e defina a ordem.</p></div></div>
+            <div class="v2-add-procedure-row">
+              <label>Serviço<select id="v2-service"><option value="">Selecione um procedimento</option></select></label>
+              <button id="v2-add-procedure" type="button">Adicionar procedimento</button>
+            </div>
+            <div id="v2-procedure-list" class="v2-procedure-list"><p class="empty-state">Nenhum procedimento adicionado.</p></div>
+            <div class="v2-estimate" aria-live="polite">
+              <span>Duração estimada <strong id="v2-total-duration">0 min</strong></span>
+              <span>Valor estimado <strong id="v2-total-price">R$ 0,00</strong></span>
+            </div>
+            <p class="booking-help">Valores e durações são estimativas. O banco recalcula tudo ao criar.</p>
+          </section>
+
+          <section class="booking-step" aria-labelledby="v2-schedule-title">
+            <div class="booking-step-heading"><span class="booking-step-number">3</span><div><h3 id="v2-schedule-title">Data e horário inicial</h3><p>A sequência completa será validada novamente pelo banco.</p></div></div>
+            <div class="v2-schedule-row">
+              <div class="v2-date-picker" aria-labelledby="v2-date-label">
+                <span id="v2-date-label" class="field-label">Data do agendamento</span>
+                <div class="v2-date-navigation">
+                  <button id="v2-date-previous" type="button" class="button-secondary" aria-label="Dia anterior">←</button>
+                  <button id="v2-date-today" type="button" class="button-secondary">Hoje</button>
+                  <button id="v2-date-next" type="button" class="button-secondary" aria-label="Próximo dia">→</button>
+                  <button id="v2-date-calendar" type="button" class="button-secondary v2-date-calendar-button" aria-label="Escolher data no calendário">
+                    <span aria-hidden="true">📅</span>
+                    <span>Escolher data</span>
+                  </button>
+                </div>
+                <div id="v2-date-formatted" class="v2-date-formatted" aria-live="polite">
+                  <strong id="v2-date-weekday"></strong>
+                  <span id="v2-date-full"></span>
+                </div>
+                <input id="v2-appointment-date" class="v2-date-controller" type="date" required tabindex="-1" aria-hidden="true">
+              </div>
+              <button id="v2-search-times" type="button">Buscar horários iniciais</button>
+            </div>
+            <div id="v2-available-times" class="time-buttons"><span class="muted">Selecione cliente, procedimentos, profissionais e data.</span></div>
+            <input id="v2-selected-time" type="hidden">
+            <div id="v2-selected-time-summary" class="selected-time-summary" hidden>
+              <strong id="v2-selected-time-label" class="selected-time"></strong>
+              <button id="v2-change-selected-time" class="button-secondary" type="button">Alterar horário</button>
+            </div>
+          </section>
+
+          <section class="booking-step" aria-labelledby="v2-summary-title">
+            <div class="booking-step-heading"><span class="booking-step-number">4</span><div><h3 id="v2-summary-title">Resumo final</h3><p>Confira antes de criar o agendamento.</p></div></div>
+            <div id="v2-booking-summary" class="v2-booking-summary"><span class="muted">Complete as etapas anteriores.</span></div>
+            <label>Observações<textarea id="v2-appointment-notes" rows="3"></textarea></label>
+          </section>
+
+          <div class="v2-create-action"><button id="v2-create-button" type="submit" disabled>Criar agendamento</button></div>
+        </form>
+      </div>
+
+      <div id="legacy-appointment-panel" hidden>
+        <div class="legacy-flow-notice"><strong>Fluxo anterior</strong><span>Disponível temporariamente para contingência operacional.</span></div>
+        <p id="appointment-message" class="message" role="alert" aria-live="polite"></p>
+        <form id="appointment-form" class="appointment-form">
         <label>Profissional<select id="profissional" required><option value="">Selecione</option></select></label>
         <label>Serviço<select id="servico" required disabled><option value="">Selecione uma profissional primeiro</option></select></label>
         <label>Nome da cliente<input id="cliente-nome" type="text" required></label>
@@ -255,7 +341,8 @@
           </div>
         </div>
         <div class="full-width"><button id="create-button" type="submit" disabled>Criar agendamento</button></div>
-      </form>
+        </form>
+      </div>
     </section>
   </main>
   </div>
@@ -420,6 +507,25 @@
           <button id="cancel-commission-adjust" class="modal-secondary-button" type="button">Cancelar</button>
           <button id="confirm-commission-adjust" type="submit">Confirmar</button>
         </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="payment-correction-modal" class="modal-overlay" hidden>
+    <section class="completion-modal" role="dialog" aria-modal="true" aria-labelledby="payment-correction-title">
+      <div class="modal-heading">
+        <div><h2 id="payment-correction-title">Corrigir pagamento</h2><p>Atualize o fechamento e registre o motivo da correção.</p></div>
+        <button id="close-payment-correction" class="modal-close" type="button" aria-label="Fechar modal">&times;</button>
+      </div>
+      <div id="payment-correction-current" class="action-summary"></div>
+      <form id="payment-correction-form" class="stack">
+        <p id="payment-correction-message" class="message" role="alert" aria-live="polite"></p>
+        <label>Valor recebido<input id="payment-correction-amount" type="text" inputmode="decimal" required></label>
+        <label>Forma de pagamento<select id="payment-correction-method" required>
+          <option value="Dinheiro">Dinheiro</option><option value="Cartão de débito">Cartão débito</option><option value="Cartão de crédito">Cartão crédito</option><option value="Pix pela maquininha">Pix maquininha</option><option value="Pix QR Code da loja">Pix QR Code</option>
+        </select></label>
+        <label>Motivo<textarea id="payment-correction-reason" rows="4" required placeholder="Ex.: Cliente pagou no Pix, lançado anteriormente como cartão."></textarea></label>
+        <div class="modal-actions"><button id="cancel-payment-correction" class="modal-secondary-button" type="button">Cancelar</button><button id="save-payment-correction" type="submit">Salvar correção</button></div>
       </form>
     </section>
   </div>

@@ -52,6 +52,7 @@ h1, h2, p, dl, dd { margin-top: 0; }
 .deposit-summary span, .deposit-summary strong { font-weight: 800; }
 .deposit-summary small { grid-column: 1 / -1; color: var(--muted); }
 #confirm-booking-button { width: 100%; }
+#whatsapp-fallback-button { width: 100%; margin-top: .55rem; color: var(--primary-dark); border: 1px solid var(--primary); background: #fff; }
 .confirmation-note { margin: .55rem 0 0; color: var(--muted); font-size: .74rem; line-height: 1.35; text-align: center; }
 .message { display: none; margin: 0 0 .75rem; padding: .65rem .85rem; border-radius: 9px; }
 .message:not(:empty) { display: block; }
@@ -97,3 +98,6 @@ h1, h2, p, dl, dd { margin-top: 0; }
   .confirmation-heading { margin-bottom: .55rem; }
   .confirmation-details div { padding-top: .48rem; padding-bottom: .48rem; }
 }
+ .summary-procedures { display: grid; gap: .55rem; margin-bottom: 1rem; }
+ .summary-procedures article { display: flex; flex-direction: column; gap: .2rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; }
+ .summary-procedures span { color: var(--muted); font-size: .85rem; }

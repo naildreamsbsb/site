@@ -79,7 +79,10 @@ function renderProfessionalFinance(data = {}) {
   cards.append(
     createFinanceSummaryCard("Atendimentos realizados", summary.totalAtendimentosConcluidos, false),
     createFinanceSummaryCard("Receita dos serviços", summary.receitaGerada),
-    createFinanceSummaryCard("Valor recebido", summary.valorRecebido),
+    createFinanceSummaryCard("Recebido bruto", summary.valorRecebido),
+    createFinanceSummaryCard("Taxas de pagamento", summary.taxasPagamento),
+    createFinanceSummaryCard("Recebido líquido", summary.valorLiquidoRecebido),
+    createFinanceSummaryCard("Valores pendentes", summary.valorPendente),
     createFinanceSummaryCard("Minha comissão", summary.comissaoTotal),
     createFinanceSummaryCard("Comissão paga", summary.comissaoPaga),
     createFinanceSummaryCard("Comissão pendente", summary.comissaoPendente)
@@ -115,6 +118,9 @@ function renderProfessionalFinance(data = {}) {
       ["Cliente", displayValue(item.cliente), false],
       ["Valor do serviço", formatCurrency(item.valorServico), true],
       ["Valor recebido", formatCurrency(item.valorRecebido), true],
+      ["Taxa de pagamento", formatCurrency(item.taxaPagamento), true],
+      ["Valor líquido", formatCurrency(item.valorLiquidoRecebido), true],
+      ["Valor pendente", formatCurrency(item.valorPendente), true],
       ["Minha comissão", formatCurrency(item.comissao), true],
       ["Status", commissionStatusLabel(item.statusComissao), false]
     ].forEach(([label, value, monetary]) => {
@@ -339,6 +345,47 @@ function itemValue(item, ...keys) {
   return keys.map((key) => item?.[key]).find((value) => value !== null && value !== undefined && value !== "");
 }
 
+function agendaDateParts(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo"
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function expandProfessionalAgendaItems(appointments) {
+  return appointments.flatMap((appointment) => {
+    const procedures = Array.isArray(appointment?.itens) ? appointment.itens : [];
+    if (!procedures.length) return [appointment];
+    return procedures.map((procedure) => {
+      const start = agendaDateParts(procedure.startAt);
+      const end = agendaDateParts(procedure.endAt);
+      return {
+        ...appointment,
+        servicoId: procedure.servicoId,
+        servicoNome: procedure.servicoNome,
+        servicoCategoria: procedure.categoria,
+        profissionalId: procedure.profissionalId,
+        profissionalNome: procedure.profissionalNome,
+        startAt: procedure.startAt,
+        endAt: procedure.endAt,
+        duracaoMinutos: procedure.duracaoMinutos,
+        dataBr: start ? `${start.day}/${start.month}/${start.year}` : appointment.dataBr,
+        horaInicio: start ? `${start.hour}:${start.minute}` : appointment.horaInicio,
+        horaFim: end ? `${end.hour}:${end.minute}` : appointment.horaFim,
+        itens: [procedure]
+      };
+    });
+  });
+}
+
 function openAgendaDetails(item) {
   const content = $("#agenda-detail-content");
   const details = [
@@ -473,7 +520,7 @@ function renderWeekAgenda(items) {
 }
 
 function renderAgenda(items) {
-  const operationalItems = items.filter((item) => (
+  const operationalItems = expandProfessionalAgendaItems(items).filter((item) => (
     item.status !== "cancelado_cliente" && item.status !== "cancelado_studio"
   ));
   if (agendaView === "week") renderWeekAgenda(operationalItems); else renderDayAgenda(operationalItems);

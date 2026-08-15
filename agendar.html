@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Escolha o serviço | Nail Dreams</title>
-  <link rel="stylesheet" href="css/agendar.css?v=3">
+  <link rel="stylesheet" href="css/agendar.css?v=4">
   <link rel="stylesheet" href="css/theme.css?v=3">
   <script src="js/theme.js?v=1"></script>
 </head>
@@ -20,8 +20,8 @@
   <main class="booking-main">
     <div class="page-heading">
       <p class="eyebrow">Etapa 1</p>
-      <h1>Escolha o serviço</h1>
-      <p>Selecione o cuidado que deseja agendar. Na próxima etapa, você escolherá a profissional.</p>
+      <h1>Escolha seus procedimentos</h1>
+      <p>Adicione até 10 procedimentos na ordem em que deseja realizá-los.</p>
     </div>
 
     <p id="booking-message" class="message" role="alert" aria-live="polite"></p>
@@ -38,11 +38,16 @@
     </section>
 
     <section id="services-content" class="services-content" aria-label="Serviços disponíveis" hidden></section>
+    <aside id="selection-summary" class="selection-summary" hidden>
+      <div class="selection-overview"><strong id="selection-count">0 procedimentos</strong><span id="selection-totals"></span></div>
+      <div id="selection-list" class="selection-list" aria-label="Sequência selecionada"></div>
+      <button id="continue-button" type="button">Escolher profissionais</button>
+    </aside>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
-  <script src="js/agendar.js?v=3"></script>
+  <script src="js/agendar.js?v=5"></script>
 </body>
 </html>

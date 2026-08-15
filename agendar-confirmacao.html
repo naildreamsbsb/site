@@ -35,9 +35,8 @@
         </div>
       </div>
 
+      <div id="summary-procedures" class="summary-procedures"></div>
       <dl class="confirmation-details">
-        <div><dt>Serviço</dt><dd id="summary-service">—</dd></div>
-        <div><dt>Profissional</dt><dd id="summary-professional">—</dd></div>
         <div><dt>Data</dt><dd id="summary-date">—</dd></div>
         <div><dt>Horário</dt><dd><span id="summary-start-time">—</span> às <span id="summary-end-time">—</span></dd></div>
         <div><dt>Duração</dt><dd id="summary-duration">—</dd></div>
@@ -50,8 +49,8 @@
         <small>para confirmação</small>
       </div>
 
-      <button id="confirm-booking-button" type="button">Confirmar meu momento</button>
-      <button id="whatsapp-studio-button" type="button" hidden>Avisar o Studio pelo WhatsApp</button>
+      <button id="confirm-booking-button" type="button">Criar agendamento</button>
+      <button id="whatsapp-fallback-button" class="button-secondary" type="button" hidden>Abrir WhatsApp</button>
       <p class="confirmation-note">Após confirmar, nossa equipe dará continuidade ao seu atendimento. 💗</p>
     </section>
   </main>
@@ -59,6 +58,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=1"></script>
   <script src="js/supabaseClient.js?v=1"></script>
-  <script src="js/agendar-confirmacao.js?v=2"></script>
+  <script src="js/agendar-confirmacao.js?v=5"></script>
 </body>
 </html>

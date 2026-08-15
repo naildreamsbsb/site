@@ -121,6 +121,12 @@ h1, h2, h3, p { margin-top: 0; }
 .card-details div { display: flex; flex-direction: column; }
 .card-details span { color: var(--muted); font-size: .76rem; }
 .card-details strong { overflow-wrap: anywhere; font-size: .9rem; }
+.appointment-procedures { margin-bottom: .85rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); }
+.appointment-procedures-title { display: block; margin-bottom: .5rem; color: var(--muted); font-size: .74rem; font-weight: 750; text-transform: uppercase; }
+.appointment-procedures-list { display: grid; gap: .55rem; }
+.appointment-procedures-list article { display: flex; min-width: 0; flex-direction: column; padding-bottom: .55rem; border-bottom: 1px solid var(--border); }
+.appointment-procedures-list article:last-child { padding-bottom: 0; border-bottom: 0; }
+.appointment-procedures-list span { color: var(--muted); font-size: .8rem; }
 .card-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .card-action-button { flex: 1 1 auto; padding: .55rem .7rem; font-size: .82rem; }
 .action-confirm { background: var(--primary); }
@@ -192,6 +198,8 @@ h1, h2, h3, p { margin-top: 0; }
 .finance-table tbody tr:last-child td { border-bottom: 0; }
 .finance-table tbody tr:hover { background: #fffafb; }
 .finance-table-empty { margin: 0; padding: 1rem; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); }
+.table-actions, .card-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.table-action-button { width: auto; min-height: 34px; padding: .4rem .65rem; font-size: .78rem; white-space: nowrap; }
 .mobile-list { display: none; }
 .data-mobile-list { gap: .75rem; }
 .mobile-data-card { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; padding: .9rem; border: 1px solid var(--border); border-radius: 10px; background: #fffafb; }
@@ -250,6 +258,7 @@ h1, h2, h3, p { margin-top: 0; }
 .settings-messages-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; }
 .template-help { margin-bottom: 1rem; color: var(--muted); font-size: .8rem; line-height: 1.7; }
 .template-help code { display: inline-block; padding: .08rem .3rem; border-radius: 4px; color: var(--primary-dark); background: #f7e9ee; }
+.payment-fees-note { margin-top: .8rem; color: var(--muted); font-size: .82rem; }
 .settings-actions { display: flex; justify-content: flex-end; }
 .services-fieldset { margin: .4rem 0 0; padding: .9rem; border: 1px solid var(--border); border-radius: 10px; }
 .services-fieldset legend { padding: 0 .35rem; color: var(--muted); font-size: .86rem; font-weight: 700; }
@@ -272,8 +281,108 @@ h1, h2, h3, p { margin-top: 0; }
 .message.info { color: #315f88; background: #eaf3fb; }
 .muted, .empty-state { color: var(--muted); }
 .empty-state { grid-column: 1 / -1; margin: 0; padding: 1.5rem; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+.appointment-flow-switch { display: inline-flex; gap: .35rem; margin: 0 0 1.2rem; padding: .3rem; border: 1px solid var(--border); border-radius: 11px; background: #faf6f7; }
+.appointment-flow-switch button { padding: .55rem .85rem; }
+.appointment-flow-switch button.is-active { color: #fff; background: var(--primary); }
+#v2-appointment-panel[hidden], #legacy-appointment-panel[hidden] { display: none; }
+.v2-appointment-form { display: grid; gap: 1rem; }
+.booking-step { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 13px; background: #fffafb; }
+.booking-step-heading { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: 1rem; }
+.booking-step-heading h3, .booking-step-heading p { margin: 0; }
+.booking-step-heading h3 { font-size: 1rem; }
+.booking-step-heading p, .booking-help { color: var(--muted); font-size: .8rem; }
+.booking-step-number { display: grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border-radius: 50%; color: #fff; background: var(--primary); font-size: .78rem; font-weight: 800; }
+.v2-client-search-row, .v2-add-procedure-row, .v2-schedule-row { display: grid; grid-template-columns: minmax(220px, 1fr) auto; align-items: end; gap: .75rem; }
+.v2-client-results { display: grid; gap: .4rem; margin-top: .65rem; }
+.v2-client-result { display: flex; width: 100%; align-items: flex-start; flex-direction: column; gap: .15rem; padding: .65rem .75rem; color: var(--text); background: #fff; border: 1px solid var(--border); text-align: left; }
+.v2-client-result:hover { color: var(--primary-dark); background: #fff5f8; }
+.v2-client-result span { color: var(--muted); font-size: .78rem; }
+.v2-selected-client { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .75rem; padding: .75rem; border: 1px solid #b9dccb; border-radius: 10px; background: #eef8f3; }
+.v2-selected-client[hidden] { display: none; }
+.v2-selected-client > div { display: flex; min-width: 0; flex-direction: column; }
+.v2-selected-client span { color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
+.v2-selected-client-details { gap: .22rem; }
+.v2-selected-client-name { margin-bottom: .15rem; font-size: 1rem; }
+.v2-selected-client-actions { display: flex !important; flex: 0 0 auto; flex-direction: row !important; gap: .45rem; }
+.v2-selected-client-actions button { padding: .5rem .7rem; }
+.v2-missing-contact { color: #8b6316 !important; font-weight: 650; }
+.v2-procedure-list { display: grid; gap: .65rem; margin-top: .85rem; }
+.v2-procedure-card { display: grid; grid-template-columns: auto minmax(150px, 1fr) minmax(180px, .8fr) auto; align-items: end; gap: .75rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.v2-procedure-order { display: grid; width: 30px; height: 30px; align-self: center; place-items: center; border-radius: 50%; color: var(--primary-dark); background: #f7e9ee; font-weight: 800; }
+.v2-procedure-info { display: flex; align-self: center; flex-direction: column; }
+.v2-procedure-info span { color: var(--muted); font-size: .76rem; }
+.v2-procedure-actions { display: flex; align-items: center; gap: .35rem; }
+.v2-procedure-actions button { padding: .5rem .6rem; }
+.v2-remove-procedure { color: #fff; background: var(--error); }
+.v2-estimate { display: flex; justify-content: flex-end; gap: 1.2rem; margin-top: .8rem; padding-top: .7rem; border-top: 1px solid var(--border); font-size: .84rem; }
+.v2-estimate strong { margin-left: .25rem; color: var(--primary-dark); }
+.booking-help { margin: .5rem 0 0; }
+.v2-booking-summary { display: grid; gap: .45rem; margin-bottom: .8rem; padding: .8rem; border-radius: 10px; background: #faf6f7; }
+.v2-booking-summary > span { color: var(--muted); font-size: .8rem; }
+.v2-summary-client { display: flex; flex-direction: column; padding-bottom: .65rem; border-bottom: 1px solid var(--border); }
+.v2-summary-client span, .v2-summary-section-title { color: var(--muted); font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .035em; }
+.v2-summary-client strong { margin-top: .15rem; }
+.v2-summary-section-title { margin-top: .3rem; }
+.v2-summary-procedures { display: grid; gap: .45rem; }
+.v2-summary-procedures article { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .65rem; padding: .6rem; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
+.v2-summary-procedures article > div { display: flex; min-width: 0; flex-direction: column; }
+.v2-summary-procedures article span { color: var(--muted); font-size: .76rem; }
+.v2-summary-order { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; color: var(--primary-dark) !important; background: #f7e9ee; font-weight: 800; }
+.v2-summary-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin-top: .35rem; padding-top: .7rem; border-top: 1px solid var(--border); }
+.v2-summary-totals > div { display: flex; min-width: 0; flex-direction: column; }
+.v2-summary-totals span { color: var(--muted); font-size: .72rem; }
+.v2-summary-totals strong { overflow-wrap: anywhere; font-size: .84rem; }
+.v2-date-picker { position: relative; display: grid; gap: .45rem; }
+.v2-date-navigation { display: grid; grid-template-columns: auto auto auto minmax(145px, 1fr); gap: .4rem; }
+.v2-date-navigation button { min-width: 44px; padding: .52rem .7rem; }
+.v2-date-navigation button:nth-child(2) { min-width: 76px; }
+.v2-date-calendar-button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; white-space: nowrap; }
+.v2-date-formatted { display: flex; min-height: 3rem; flex-direction: column; justify-content: center; color: var(--text); text-transform: capitalize; }
+.v2-date-formatted strong { font-size: 1rem; }
+.v2-date-formatted span { color: var(--muted); font-size: .84rem; }
+.v2-date-controller { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.v2-create-action { display: flex; justify-content: flex-end; }
+.v2-create-action button { min-width: 220px; }
+.legacy-flow-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: .75rem; border: 1px solid #ead5a8; border-radius: 10px; color: #735718; background: #fff9e9; }
+.legacy-flow-notice span { font-size: .8rem; }
+:root[data-theme="dark"] .appointment-flow-switch,
+:root[data-theme="dark"] .booking-step,
+:root[data-theme="dark"] .v2-procedure-card,
+:root[data-theme="dark"] .v2-client-result,
+:root[data-theme="dark"] .v2-booking-summary,
+:root[data-theme="dark"] .v2-summary-procedures article {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="dark"] .booking-step-heading h3,
+:root[data-theme="dark"] .v2-procedure-info strong,
+:root[data-theme="dark"] .v2-selected-client-name,
+:root[data-theme="dark"] .v2-booking-summary strong,
+:root[data-theme="dark"] .v2-date-formatted { color: var(--text); }
+:root[data-theme="dark"] .booking-step-heading p,
+:root[data-theme="dark"] .booking-help,
+:root[data-theme="dark"] .field-label,
+:root[data-theme="dark"] .v2-procedure-info span,
+:root[data-theme="dark"] .v2-client-result span,
+:root[data-theme="dark"] .v2-summary-procedures article span,
+:root[data-theme="dark"] .v2-summary-totals span,
+:root[data-theme="dark"] .v2-selected-client span { color: var(--muted); }
+:root[data-theme="dark"] .v2-client-result:hover { color: var(--text); background: var(--surface-soft); }
+:root[data-theme="dark"] .v2-selected-client { color: var(--text); border-color: #356c53; background: var(--success-soft); }
+:root[data-theme="dark"] .v2-missing-contact { color: #f1c777 !important; }
+:root[data-theme="dark"] .v2-procedure-order,
+:root[data-theme="dark"] .v2-summary-order { color: var(--primary-dark) !important; background: var(--primary-soft); }
+:root[data-theme="dark"] .v2-estimate strong { color: var(--primary-dark); }
+:root[data-theme="dark"] .selected-time-summary { color: var(--text); border-color: var(--border); background: var(--primary-soft); }
+:root[data-theme="dark"] .legacy-flow-notice { color: #f1d18c; border-color: #69542c; background: #392f1d; }
+:root[data-theme="dark"] #v2-appointment-message.message.error { color: #ffabb4; background: var(--danger-soft); }
+:root[data-theme="dark"] #v2-appointment-message.message.success { color: #8ee0b8; background: var(--success-soft); }
+:root[data-theme="dark"] #v2-appointment-message.message.info { color: #b6d7f3; background: #233848; }
 
 @media (max-width: 768px) {
+  .compact-mobile-card .card-actions { grid-column: 1 / -1; }
+  .compact-mobile-card .table-action-button { flex: 1 1 150px; }
   .app-sidebar { z-index: 1100; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 12px 0 36px rgba(46, 37, 41, .14); }
   .sidebar-open .app-sidebar { transform: translateX(0); }
   .sidebar-backdrop { position: fixed; z-index: 1000; inset: 0; background: rgba(35, 24, 29, .45); }
@@ -323,6 +432,21 @@ h1, h2, h3, p { margin-top: 0; }
   .form-row button, .form-action button, .full-width button { width: 100%; }
   .selected-time-summary { width: 100%; max-width: none; align-items: stretch; flex-direction: column; }
   .selected-time-summary button { width: 100%; }
+  .appointment-flow-switch { display: flex; }
+  .appointment-flow-switch button { flex: 1; }
+  .v2-client-search-row, .v2-add-procedure-row, .v2-schedule-row { grid-template-columns: 1fr; }
+  .v2-client-search-row button, .v2-add-procedure-row button, .v2-schedule-row button { width: 100%; }
+  .v2-date-navigation { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .v2-date-calendar-button { grid-column: 1 / -1; }
+  .v2-procedure-card { grid-template-columns: auto 1fr; align-items: start; }
+  .v2-procedure-card label, .v2-procedure-actions { grid-column: 1 / -1; }
+  .v2-procedure-actions { justify-content: flex-end; }
+  .v2-selected-client { align-items: stretch; flex-direction: column; }
+  .v2-selected-client-actions { width: 100%; }
+  .v2-selected-client-actions button { flex: 1; }
+  .v2-summary-totals { grid-template-columns: 1fr; }
+  .v2-estimate, .legacy-flow-notice { align-items: stretch; flex-direction: column; }
+  .v2-create-action button { width: 100%; min-width: 0; }
   .card-whatsapp-actions .card-action-button { width: 100%; flex-basis: 100%; }
   .finance-filters button { width: 100%; }
   .commissions-filter-actions { flex-direction: column; }

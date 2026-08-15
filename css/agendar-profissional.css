@@ -59,3 +59,54 @@ h1, h2, p { margin-top: 0; }
   .site-link { padding: .3rem .5rem; font-size: .76rem; }
   .back-link { max-width: 120px; font-size: .85rem; text-align: right; }
 }
+ .procedure-professionals { display: grid; gap: 1rem; }
+ .procedure-professional-card { display: grid; grid-template-columns: minmax(220px,1fr) minmax(240px,1fr); align-items: end; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+ .procedure-professional-card > div { display: flex; align-items: center; gap: .75rem; }
+ .procedure-professional-card > div > span { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border-radius: 50%; color: #fff; background: var(--primary); font-weight: 800; }
+ .procedure-professional-card > div > div { display: flex; flex-direction: column; }
+ .procedure-professional-card small { margin-top: .2rem; color: var(--muted); }
+ .procedure-professional-card label { display: grid; gap: .4rem; color: var(--muted); font-size: .8rem; font-weight: 700; }
+ .procedure-professional-card select { width: 100%; padding: .72rem; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: var(--surface); font: inherit; }
+ .automatic-professional { display: flex; align-items: flex-start !important; flex-direction: column; gap: .2rem !important; padding: .65rem .75rem; border: 1px solid #b9dccb; border-radius: 9px; background: #eef8f3; }
+ .automatic-professional strong { color: var(--text); }
+ .booking-actions { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+
+ :root[data-theme="dark"] .page-heading h1,
+ :root[data-theme="dark"] .procedure-professional-card,
+ :root[data-theme="dark"] .procedure-professional-card strong {
+   color: var(--text);
+ }
+ :root[data-theme="dark"] .procedure-professional-card {
+   border-color: var(--border);
+   background: var(--surface);
+   box-shadow: 0 10px 28px rgba(0, 0, 0, .2);
+ }
+ :root[data-theme="dark"] .procedure-professional-card small,
+ :root[data-theme="dark"] .procedure-professional-card label,
+ :root[data-theme="dark"] .page-heading > p:last-child,
+ :root[data-theme="dark"] .loading-card p {
+   color: var(--muted);
+ }
+ :root[data-theme="dark"] .procedure-professional-card select {
+   color: var(--text);
+   border-color: var(--border);
+   background: #21191e;
+   color-scheme: dark;
+ }
+ :root[data-theme="dark"] .procedure-professional-card select option {
+   color: var(--text);
+   background: #21191e;
+ }
+ :root[data-theme="dark"] .automatic-professional {
+   color: var(--text);
+   border-color: #356c53;
+   background: var(--success-soft);
+ }
+ :root[data-theme="dark"] .automatic-professional strong {
+   color: #effbf5;
+ }
+ :root[data-theme="dark"] .procedure-professional-card > div > span {
+   color: #fff;
+   background: var(--primary);
+ }
+ @media (max-width: 640px) { .procedure-professional-card { grid-template-columns: 1fr; } .booking-actions button { width: 100%; } }
