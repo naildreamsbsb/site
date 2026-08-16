@@ -1,4 +1,5 @@
 const ALLOWED_ROLES = ["admin", "recepcao"];
+const supabaseClient = window.supabaseClient;
 
 function showMessage(element, text, type = "error") {
   if (!element) return;
@@ -203,9 +204,20 @@ async function initializeLogin() {
 
 const loginForm = document.querySelector("#login-form");
 if (loginForm) {
-  loginForm.addEventListener("submit", handleLogin);
-  document.querySelector("#forgot-password-button").addEventListener("click", handleForgotPassword);
-  document.querySelector("#continue-session-button").addEventListener("click", handleContinueSession);
-  document.querySelector("#switch-user-button").addEventListener("click", handleSwitchUser);
-  initializeLogin();
+  if (!supabaseClient) {
+    loginForm.querySelectorAll("input, button").forEach((element) => {
+      element.disabled = true;
+    });
+    showMessage(
+      document.querySelector("#login-message"),
+      "Não foi possível iniciar o acesso ao sistema. Atualize a página e tente novamente."
+    );
+    console.error("Bootstrap do Supabase indisponível.", window.supabaseBootstrapError);
+  } else {
+    loginForm.addEventListener("submit", handleLogin);
+    document.querySelector("#forgot-password-button").addEventListener("click", handleForgotPassword);
+    document.querySelector("#continue-session-button").addEventListener("click", handleContinueSession);
+    document.querySelector("#switch-user-button").addEventListener("click", handleSwitchUser);
+    initializeLogin();
+  }
 }

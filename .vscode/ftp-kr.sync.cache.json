@@ -1,21 +1,11 @@
 {
   "ftp://naildreams.com.br:21@naildreams1": {
     "public_html": {
-      "js": {
-        "meus-agendamentos.js": {
-          "type": "-",
-          "size": 9583,
-          "lmtime": 1786685004592,
-          "modified": false
-        }
-      },
-      "css": {
-        "meus-agendamentos.css": {
-          "type": "-",
-          "size": 4537,
-          "lmtime": 1786685008059,
-          "modified": false
-        }
+      "index.html": {
+        "type": "-",
+        "size": 23472,
+        "lmtime": 1786850583235,
+        "modified": false
       }
     }
   },

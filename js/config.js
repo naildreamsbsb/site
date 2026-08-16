@@ -1,2 +1,4 @@
-const SUPABASE_URL = "https://syvkeatydvxpebyvpqmb.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_m-dC7swNPOQpEiGy7q9l0w_NAt2CNcm";
+window.NAIL_DREAMS_CONFIG = Object.freeze({
+  supabaseUrl: "https://syvkeatydvxpebyvpqmb.supabase.co",
+  supabasePublishableKey: "sb_publishable_m-dC7swNPOQpEiGy7q9l0w_NAt2CNcm"
+});

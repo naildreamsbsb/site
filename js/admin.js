@@ -326,10 +326,21 @@ function confirmationWhatsAppMessage(appointment) {
 }
 
 function completionWhatsAppMessage(appointment) {
-  const reviewSection = GOOGLE_REVIEW_URL
-    ? `\n\n⭐ Avalie a Nail Dreams no Google:\n${GOOGLE_REVIEW_URL}`
-    : "";
-  return `Olá, ${appointmentClientFirstName(appointment)}! 💕\n\nFoi uma alegria receber você na Nail Dreams. Esperamos que seu momento com a gente tenha sido tão especial quanto foi para nós cuidar de você. ✨\n\nSe puder, conte como foi sua experiência. Sua avaliação ajuda outras pessoas a conhecerem nosso trabalho e nos ajuda a continuar melhorando.${reviewSection}\n\nEsperamos você novamente em breve. ❤️\n\nCom carinho,\nEquipe Nail Dreams`;
+  return `✨ Olá, ${appointmentClientFirstName(appointment)}! Tudo bem? 💕
+
+Foi um prazer receber você na Nail Dreams. Ficamos muito felizes em fazer parte do seu momento de cuidado e beleza. 💅✨
+
+Esperamos que você tenha amado sua experiência com a gente tanto quanto nós amamos cuidar de você. ❤️
+
+Sua opinião é muito importante para nós! Se puder, deixe uma avaliação contando como foi seu atendimento. Ela ajuda outras divas a conhecerem a Nail Dreams e também nos ajuda a continuar entregando experiências cada vez melhores. ✨
+
+⭐ Avalie a Nail Dreams:
+https://naildreams.com.br/avaliacao.html
+
+Agradecemos pela confiança e esperamos receber você novamente muito em breve. 💕
+
+Com carinho,
+Equipe Nail Dreams ✨`;
 }
 
 function cancellationWhatsAppMessage(appointment) {
@@ -1545,7 +1556,7 @@ async function searchV2AvailableTimes() {
   setBusy(button, true, "Buscando...");
   showMessage(document.querySelector("#v2-appointment-message"), "");
   try {
-    const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis", {
+    const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis_staff", {
       p_profissional_id: first.profissional_id,
       p_servico_id: first.servico_id,
       p_data: date,
@@ -1784,7 +1795,7 @@ async function createV2Appointment(event) {
       p_cliente_nome: null,
       p_cliente_phone: null,
       p_cliente_email: null,
-      p_appointment_type: "normal",
+      p_appointment_type: new Date(buildSaoPauloTimestamp(date, time)) <= new Date() ? "encaixe" : "normal",
       p_requires_deposit_override: null,
       p_deposit_percent_override: null,
       p_notes: document.querySelector("#v2-appointment-notes").value.trim() || null
@@ -1959,7 +1970,7 @@ async function searchAvailableTimes() {
   setBusy(button, true, "Buscando...");
   showAppointmentMessage("");
   try {
-    const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis", {
+    const { data, error } = await supabaseClient.rpc("get_horarios_disponiveis_staff", {
       p_profissional_id: professionalId,
       p_servico_id: serviceId,
       p_data: date,
@@ -2002,7 +2013,7 @@ async function createAppointment(event) {
       p_cliente_phone: document.querySelector("#cliente-phone").value.trim(),
       p_cliente_email: document.querySelector("#cliente-email").value.trim() || null,
       p_cliente_id: null,
-      p_appointment_type: "normal",
+      p_appointment_type: new Date(buildSaoPauloTimestamp(date, time)) <= new Date() ? "encaixe" : "normal",
       p_requires_deposit_override: null,
       p_deposit_percent_override: null,
       p_notes: null

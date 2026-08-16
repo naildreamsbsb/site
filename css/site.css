@@ -718,6 +718,26 @@ address {
   font-weight: 850;
 }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.footer-links a:not(:last-child) {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+@media (max-width: 820px) {
+  .footer-links {
+    justify-content: flex-start;
+  }
+}
+
 .lightbox {
   position: fixed;
   inset: 0;
